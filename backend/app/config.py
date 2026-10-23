@@ -47,6 +47,11 @@ class Settings:
     max_body_records: int
 
     @property
+    def is_dev(self) -> bool:
+        """Demo sign-in and dev-only routes need an explicit APP_ENV=dev (or local/test)."""
+        return self.app_env in {"dev", "local", "test"}
+
+    @property
     def transmitter_ready(self) -> bool:
         return all([
             len(self.site_code) == 4,
@@ -69,7 +74,7 @@ def get_settings() -> Settings:
     except ValueError:
         max_body = 50
     return Settings(
-        app_env=_env("APP_ENV", default="dev"),
+        app_env=_env("APP_ENV", default="prod").lower(),
         site_code=_env("KN_SITE_CODE", default="2809").upper(),
         sender_id=_env("KN_SENDER_ID", default="S1F").upper(),
         password=_env("KN_TRANSMITTER_PASSWORD").upper(),

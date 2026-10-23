@@ -25,6 +25,7 @@ from app.edi.layout import (
     F301,
     F401,
     F411,
+    F411_ERRORS,
     F906,
     FACILITY_TYPES,
     RECORD_LEN,
@@ -150,6 +151,7 @@ class ParsedResponse:
                 "country": "",
                 "error_code": rejection.get("error_code", ""),
                 "error_message": rejection.get("error_message", ""),
+                "error_label": rejection.get("error_label", ""),
                 "entry_warning": "",
             })
         for district in self.districts:
@@ -270,11 +272,13 @@ def parse_response(text: str) -> ParsedResponse:
         elif record == "F411":
             error = take(line, F411["error_code"])
             if error:
+                message = take(line, F411["error_message"]) or F411_ERRORS.get(error, "")
                 parsed.rejections.append(
                     {
                         "echo": echo or "",
                         "error_code": error,
-                        "error_message": take(line, F411["error_message"]),
+                        "error_message": message,
+                        "error_label": F411_ERRORS.get(error, message),
                         "raw": line,
                     }
                 )

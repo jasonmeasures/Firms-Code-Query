@@ -13,6 +13,4 @@ export function echoMatches(left: string, right: string): 'match' | 'differ' | '
   return left.trim() === right.trim() ? 'match' : 'differ';
 }
 
-export function firmsCodeValid(value: string): boolean {
-  return /^[A-Z0-9]{4}$/.test(value.trim().toUpperCase());
-}
+export { firmsCodeValid } from './validation';

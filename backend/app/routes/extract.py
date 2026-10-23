@@ -27,7 +27,8 @@ from app.models import (
 )
 from app.mq.outbound import ExtractOutbound
 from app.security import can_see, current_user, require_admin, visible_requests
-from app.services.workflow import apply_response, mask_password, preview, retry, submit
+from app.services.entry import ENTRY_SOURCES, validate_entry_locations
+from app.services.workflow import apply_response, mask_password, preview, resume_unsent, retry, submit
 
 router = APIRouter(prefix='/api/extract')
 
@@ -47,6 +48,15 @@ class CallbackBody(BaseModel):
 
 class DevResponseBody(BaseModel):
     message: str
+
+
+class EntryLocation(BaseModel):
+    firms_code: str
+    source: str = 'AE20'
+
+
+class EntryValidateBody(BaseModel):
+    locations: list[EntryLocation] = Field(default_factory=list)
 
 
 def _request_dict(row: ExtractRequest, *, with_edi: bool = False) -> dict:
@@ -197,7 +207,7 @@ def dev_response(
     user: User = Depends(require_admin),
 ) -> dict:
     from app.config import get_settings
-    if get_settings().app_env == 'prod':
+    if not get_settings().is_dev:
         raise HTTPException(status_code=404, detail='Not available')
     row = _load(session, request_id, user)
     apply_response(session, body.message, correlation_id=row.control_id)
@@ -218,9 +228,7 @@ def resume_job(job_id: str, session: Session = Depends(get_session), user: User 
     job = session.get(ExtractJob, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail='Job not found')
-    for row in list(job.requests):
-        if row.mq_send_state == 'FAILED':
-            retry(session, user, row, confirm=False)
+    resume_unsent(session, user, job)
     session.refresh(job)
     return _job_dict(job)
 
@@ -249,6 +257,7 @@ def mq_status(user: User = Depends(current_user)) -> dict:
 def vault(session: Session = Depends(get_session), user: User = Depends(current_user)) -> dict:
     rows = session.scalars(visible_requests(user).limit(200)).all()
     payload = {'requests': [_request_dict(row, with_edi=True) for row in rows]}
+    failed = [row for row in rows if row.mq_send_state == 'FAILED']
     if user.role == 'ADMIN':
         orphans = session.scalars(select(ExtractOrphan).order_by(ExtractOrphan.received_at.desc()).limit(100)).all()
         payload['orphans'] = [
@@ -261,8 +270,10 @@ def vault(session: Session = Depends(get_session), user: User = Depends(current_
             }
             for item in orphans
         ]
+        payload['dead_letters'] = [_request_dict(row, with_edi=True) for row in failed]
     else:
         payload['orphans'] = []
+        payload['dead_letters'] = []
     return payload
 
 
@@ -336,6 +347,22 @@ def _facility(row: FirmsFacility) -> dict:
         'first_seen': row.first_seen.isoformat() if row.first_seen else None,
         'last_seen': row.last_seen.isoformat() if row.last_seen else None,
     }
+
+
+@router.get('/reference/firms/entry-sources')
+def firms_entry_sources(user: User = Depends(current_user)) -> dict:
+    del user
+    return {'sources': [{'id': key, 'label': label} for key, label in ENTRY_SOURCES.items()]}
+
+
+@router.post('/reference/firms/validate')
+def firms_validate(
+    body: EntryValidateBody,
+    session: Session = Depends(get_session),
+    user: User = Depends(current_user),
+) -> dict:
+    del user
+    return validate_entry_locations(session, [item.model_dump() for item in body.locations])
 
 
 @router.get('/reference/firms/changes')

@@ -261,8 +261,12 @@ def _chunked_list(session: Session, user: User, codes: list[str], cap: int) -> d
         rows.append(row)
     session.commit()
     for row in rows:
-        transmit(session, row, user.id)
-    session.refresh(job)
+        try:
+            transmit(session, row, user.id)
+        except HTTPException:
+            continue  # the row is marked FAILED; keep sending the other chunks
+    _refresh_job(job)
+    session.commit()
     return {'request': rows[0], 'job': job}
 
 
@@ -313,6 +317,24 @@ def retry(session: Session, user: User, row: ExtractRequest, confirm: bool) -> E
     transmit(session, row, user.id)
     session.refresh(row)
     return row
+
+
+def resume_unsent(session: Session, user: User, job: ExtractJob) -> None:
+    """Resend every chunk that failed or never left the building."""
+    for row in list(job.requests):
+        if row.mq_send_state == 'FAILED':
+            try:
+                retry(session, user, row, confirm=False)
+            except HTTPException:
+                continue
+        elif row.mq_send_state is None and row.status == 'DRAFT':
+            try:
+                transmit(session, row, user.id)
+            except HTTPException:
+                continue
+    session.refresh(job)
+    _refresh_job(job)
+    session.commit()
 
 
 def apply_response(session: Session, message: str, correlation_id: str | None = None) -> dict:
