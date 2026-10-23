@@ -1,0 +1,75 @@
+:root {
+  --color-primary-500: #003F5B;
+  --color-primary-50: #E7ECF0;
+  --color-blue-sapphire-500: #005D7C;
+  --color-surface-100: #F1F3F5;
+  --color-surface-300: #DEE2E6;
+  --color-red-500: #FF3D33;
+  --color-green-500: #23C55E;
+  --color-marigold-400: #F7A633;
+  --color-blue-gray-500: #64748B;
+  --kn-page: #F7F8F9;
+  --primary-color: #003F5B;
+  --text-color: #0E2638;
+}
+
+html, body, #root { min-height: 100%; margin: 0; }
+body {
+  font-family: Inter, Roboto, Arial, sans-serif;
+  background: var(--kn-page);
+  color: var(--text-color);
+}
+
+.kn-topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--color-surface-300);
+  padding: 0.85rem 1.25rem;
+}
+.kn-nav-btn {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--color-blue-gray-500);
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.kn-nav-btn.active { color: var(--color-primary-500); background: var(--color-primary-50); }
+.kn-nav-btn:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+.kn-status-badge, .kn-status-DRAFT, .kn-status-PENDING_CBP, .kn-status-APPROVED, .kn-status-REJECTED, .kn-send-error {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.kn-status-DRAFT { color: var(--color-blue-gray-500); background: var(--color-surface-100); }
+.kn-status-PENDING_CBP, .kn-status-SUBMITTED { color: #11304C; background: var(--color-marigold-400); }
+.kn-status-APPROVED { color: #fff; background: var(--color-green-500); }
+.kn-status-REJECTED, .kn-send-error { color: #fff; background: var(--color-red-500); }
+
+.kn-edi {
+  background: #0f1b29;
+  color: #d6e6f5;
+  border-radius: 4px;
+  padding: 12px 14px;
+  overflow: auto;
+  max-height: 420px;
+}
+.kn-edi pre { margin: 0; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre; }
+.kn-ruler { color: #6f8aa5; }
+
+.kn-card {
+  border: 1px solid var(--color-surface-300);
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+}
+.kn-card h3 { margin: 0 0 0.35rem; color: #11304C; }
+.kn-help { color: var(--color-blue-gray-500); font-size: 0.85rem; }

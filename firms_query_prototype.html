@@ -1,0 +1,481 @@
+<title>FIRMS Query Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one working column. Inputs on top, then envelope settings, then the 80-column EDI output with a position ruler. */
+:root{
+  --bg:#f5f7fa; --surface:#ffffff; --fg:#14202e; --muted:#5a6b7d; --line:#d5dde6;
+  --accent:#0b5cad; --accent-fg:#ffffff; --ok:#16794a; --warn:#a15c00; --bad:#b3261e;
+  --code-bg:#0f1b29; --code-fg:#d6e6f5; --code-dim:#6f8aa5; --code-hi:#ffcf70;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c141d; --surface:#142030; --fg:#e4edf6; --muted:#8fa3b8; --line:#273a50;
+  --accent:#5aa7ff; --accent-fg:#06121f; --ok:#4cc68a; --warn:#e0a24a; --bad:#ff7d73;
+  --code-bg:#081018; --code-fg:#cfe3f6; --code-dim:#5f7a94; --code-hi:#ffcf70; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c141d; --surface:#142030; --fg:#e4edf6; --muted:#8fa3b8; --line:#273a50;
+  --accent:#5aa7ff; --accent-fg:#06121f; --ok:#4cc68a; --warn:#e0a24a; --bad:#ff7d73;
+  --code-bg:#081018; --code-fg:#cfe3f6; --code-dim:#5f7a94; --code-hi:#ffcf70; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--font-body);margin:0;
+  padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-size:24px;line-height:1.2;margin:0;font-weight:600;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:65ch}
+.sub code,.hint code{font-family:var(--font-mono);font-size:.9em}
+section{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font:inherit;font-weight:500;padding:8px 14px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:4px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tab:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label{display:flex;flex-direction:column;gap:4px;font-weight:500;font-size:13px;min-width:0}
+input[type=text],textarea{font:15px var(--font-mono);padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
+textarea{min-height:110px;resize:vertical}
+select{font:15px var(--font-body);padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);max-width:240px}
+input[readonly]{opacity:.65;cursor:not-allowed}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{color:var(--muted);font-size:13px;font-weight:400;max-width:70ch}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row>label{flex:1 1 150px}
+.radios{display:flex;flex-direction:column;gap:10px}
+.radio{flex-direction:row;align-items:flex-start;gap:10px;font-weight:500}
+.radio input{margin-top:4px}
+.radio span small{display:block;color:var(--muted);font-weight:400;font-size:13px;max-width:62ch}
+details summary{cursor:pointer;font-weight:500;font-size:13px}
+details .row{margin-top:12px}
+.status{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.status b{color:var(--fg);font-variant-numeric:tabular-nums}
+.msg{font-size:13px;margin:0}
+.msg.bad{color:var(--bad)} .msg.warn{color:var(--warn)} .msg.ok{color:var(--ok)}
+.outhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+button.copy{font:inherit;font-weight:600;padding:8px 16px;border:0;border-radius:4px;background:var(--accent);color:var(--accent-fg);cursor:pointer}
+button.copy:disabled{opacity:.45;cursor:not-allowed}
+.edi{background:var(--code-bg);color:var(--code-fg);border-radius:4px;padding:12px 14px;overflow-x:auto;max-height:420px;overflow-y:auto}
+.edi pre{margin:0;font:13px/1.5 var(--font-mono);white-space:pre;width:max-content}
+.edi .ruler{color:var(--code-dim);user-select:none}
+.edi .env{color:var(--code-dim)}
+.edi .q{color:var(--code-hi)}
+.edi .empty{color:var(--code-dim)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+td.mono,.mono{font-family:var(--font-mono)}
+.tbl{overflow-x:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;min-width:0;background:var(--bg)}
+.card h3{margin:0;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.card .meta{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.card .meta b{color:var(--fg);font-weight:500}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid currentColor;margin-right:6px}
+.pill.ok{color:var(--ok)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.csv{background:var(--code-bg);color:var(--code-fg);border-radius:4px;padding:12px 14px;overflow:auto;max-height:260px}
+.csv pre{margin:0;font:12.5px/1.5 var(--font-mono);white-space:pre;width:max-content}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button.alt{font:inherit;font-weight:600;padding:8px 16px;border:1px solid var(--accent);border-radius:4px;background:transparent;color:var(--accent);cursor:pointer}
+button.alt:disabled{opacity:.45;cursor:not-allowed}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<main>
+  <header>
+    <h1>FIRMS Query Builder</h1>
+    <p class="sub">Builds ACE ABI Extract Reference File queries (record <code>F111</code>, application ID <code>FQ</code>) for facility, location-of-goods lookups. Source: ACE CATAIR Extract Reference File, June 25, 2018 draft, pages ERF-30 to ERF-35.</p>
+  </header>
+
+  <section aria-label="Query type">
+    <h2>Query</h2>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" id="tab-single" aria-selected="true" data-mode="single">One FIRMS code</button>
+      <button class="tab" role="tab" id="tab-list" aria-selected="false" data-mode="list">List of codes</button>
+      <button class="tab" role="tab" id="tab-all" aria-selected="false" data-mode="all">Whole list</button>
+      <button class="tab" role="tab" id="tab-dist" aria-selected="false" data-mode="dist">District list (F101)</button>
+    </div>
+
+    <div id="p-single">
+      <label for="code">FIRMS code (4 letters or digits)
+        <input type="text" id="code" value="E123" maxlength="4" autocomplete="off" spellcheck="false">
+        <span class="hint">E123 is a sample. Replace it with the code from the entry (SE11, 20-record or X10).</span>
+      </label>
+    </div>
+
+    <div id="p-list" hidden>
+      <label for="codes">FIRMS codes, one per line (or separated by commas or spaces)
+        <textarea id="codes" spellcheck="false" placeholder="E123&#10;F456&#10;H789"></textarea>
+        <span class="hint">Each code becomes its own F111 record. Duplicates are removed.</span>
+      </label>
+    </div>
+
+    <div id="p-all" hidden>
+      <div class="radios">
+        <label class="radio"><input type="radio" name="allmode" value="date" checked>
+          <span>Everything since a date<small>One F111 with only a begin date. ACE returns every FIRMS code added or updated on or after it. Use an early date to pull the full file.</small></span></label>
+        <label class="radio"><input type="radio" name="allmode" value="district">
+          <span>District by district<small>One F111 per 2-digit district. Use this if the date pull comes back short, or to split a large pull into pieces.</small></span></label>
+      </div>
+      <div id="all-date">
+        <label for="begin">Begin date (MMDDYY, not in the future)
+          <input type="text" id="begin" value="010100" maxlength="6" inputmode="numeric" autocomplete="off">
+        </label>
+      </div>
+      <div id="all-district" hidden>
+        <label for="districts">District or port codes, one per line
+          <textarea id="districts" spellcheck="false" placeholder="Paste district codes (2 digits) or port codes (4 digits)"></textarea>
+          <span class="hint">Port codes are cut to their first two digits and de-duplicated. Look up valid codes with the F101 region/district/port query in the same chapter.</span>
+        </label>
+        <label for="distdate">Optional begin date for every district (MMDDYY)
+          <input type="text" id="distdate" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="leave blank for all">
+        </label>
+      </div>
+    </div>
+
+    <div id="p-dist" hidden>
+      <p class="hint">Step 1: copy the EDI below and send it. The F101 input record takes no parameters and returns every region, district and port (output application ID FO). Step 2: paste the response here to pull out the district codes for the district-by-district whole-list pull.</p>
+      <label for="f101resp">F101 response (F101, F201, F301 and F401 lines; brackets are fine)
+        <textarea id="f101resp" spellcheck="false" placeholder="Paste the FO response here"></textarea>
+      </label>
+      <label for="digits">Take the district from the 5-digit code
+        <select id="digits"><option value="0">digits 1-2</option><option value="1">digits 2-3</option></select>
+        <span class="hint">F111 wants the first two digits of the district/port code. The layout shows the code as 5 digits, so check the preview against a code you know and switch if it looks wrong.</span>
+      </label>
+      <div class="tbl" id="f101tbl" hidden></div>
+      <div class="row"><button class="copy" id="usedist" type="button" disabled>Use these districts in the whole-list pull</button></div>
+    </div>
+
+    <div class="row" id="dyn">
+        <label for="pw">Communication password<span class="hint">A record, pos 9-14.</span><input type="text" id="pw" value="KLEAR1" readonly maxlength="6" autocomplete="off" placeholder="6 characters"></label>
+        <label for="kn">KN number<span class="hint">A record, pos 60-80. Echoed back by ACE.</span><input type="text" id="kn" value="" placeholder="KN-09PC-11:EE" maxlength="21" autocomplete="off"></label>
+        <label for="ctl">Control ID<span class="hint">B record, pos 60-80. Echoed back by ACE.</span><span style="display:flex;gap:6px"><input type="text" id="ctl" value="" maxlength="21" autocomplete="off"><button type="button" class="tab" id="genctl">New</button></span></label>
+    </div>
+
+    <p id="msg" class="msg" aria-live="polite"></p>
+
+    <details>
+      <summary>Envelope settings</summary>
+      <div class="row">
+        <label for="site">Site code (A, Z, pos 2-5)<input type="text" id="site" value="2809" readonly maxlength="4" autocomplete="off"></label>
+        <label for="rid">Sender ID (A, Z, pos 6-8)<input type="text" id="rid" value="S1F" readonly maxlength="3" autocomplete="off"></label>
+        <label for="port">Processing port (B, Y, pos 4-7)<input type="text" id="port" value="2809" readonly maxlength="4" autocomplete="off"></label>
+        <label for="filer">Processing filer (B, Y, pos 8-10)<input type="text" id="filer" value="S1F" readonly maxlength="3" autocomplete="off"></label>
+        <label for="pport">Preparer port (B, pos 47-50)<input type="text" id="pport" value="2809" readonly maxlength="4" autocomplete="off"></label>
+        <label for="pfiler">Preparer filer (B, pos 51-53)<input type="text" id="pfiler" value="S1F" readonly maxlength="3" autocomplete="off"></label>
+        <label for="app">Application ID<input type="text" id="app" value="FQ" maxlength="2" autocomplete="off"></label>
+        <label for="date">Date (MMDDYY)<input type="text" id="date" maxlength="6" inputmode="numeric" autocomplete="off"></label>
+      </div>
+      <p class="hint" style="margin-top:10px">Positions follow the ACE CATAIR Batch and Block Control chapter (V20). Site, sender, processing and preparer values are all KlearNow's (2809 and S1F) and are locked. The KN number and control ID go in the user data text (positions 60-80) of the A and B records, and ACE echoes them back unchanged. The application ID is FQ for FIRMS queries, and responses come back as FO.</p>
+    </details>
+  </section>
+
+  <section aria-label="Output">
+    <div class="outhead">
+      <h2>EDI output (updates as you type)</h2>
+      <button class="copy" id="copy" type="button">Copy EDI</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="edi" id="edi" tabindex="0" aria-label="Generated EDI"></div>
+    <p class="hint">Every record is exactly 80 characters and sits between brackets. Remove the brackets if your sender adds its own. The ruler above the first line marks every tenth position.</p>
+  </section>
+
+  <section aria-label="Read a response">
+    <h2>Read a response</h2>
+    <label for="resp">Paste the ACE response (application ID FO). Brackets are fine.
+      <textarea id="resp" spellcheck="false" style="min-height:140px" placeholder="[A2809S1F      101826     FO ...&#10;[B  2809S1FFO ...&#10;[F211...&#10;[F311...&#10;[F411..."></textarea>
+    </label>
+    <div class="status" id="rstatus"></div>
+    <div class="chips" id="rchips"></div>
+    <div id="rview"></div>
+    <div class="outhead">
+      <h2>CSV</h2>
+      <div class="btns"><button class="copy" id="csvcopy" type="button" disabled>Copy CSV</button><button class="alt" id="csvsave" type="button" disabled hidden>Save CSV file</button></div>
+    </div>
+    <div class="csv" id="csvbox" tabindex="0" aria-label="CSV output"><pre id="csvpre">Paste a response above to see the CSV.</pre></div>
+    <p class="hint" id="csvnote">One row per facility: KN number, control ID, district/port, FIRMS code, status, facility type, name, last update, address, city, state, ZIP, country and any error. Use it for the whole-list pull, or any response, single or list.</p>
+  </section>
+
+  <section aria-label="Reference">
+    <h2>F111 layout</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Element</th><th>Pos</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td>Control ID, type, file code</td><td class="mono">1-4</td><td class="mono">F 1 11</td></tr>
+        <tr><td>FIRMS code</td><td class="mono">5-8</td><td>4AN. When used, positions 9-51 stay blank.</td></tr>
+        <tr><td>Name of facility</td><td class="mono">9-43</td><td>Prefix match. Needs a district code.</td></tr>
+        <tr><td>District code</td><td class="mono">44-45</td><td>First two digits of the port code.</td></tr>
+        <tr><td>Begin date</td><td class="mono">46-51</td><td>MMDDYY. Alone or with a district only.</td></tr>
+        <tr><td>Filler</td><td class="mono">52-80</td><td>Spaces</td></tr>
+      </tbody>
+    </table></div>
+    <p class="hint">Rejections return your F111 followed by an F411 with an error code: 001 name with code, 002 port with code, 003 name and port with code, 004 port required with name, 005 street address not on file, 012 code not on file, 0D6 facility name not on file, F15 invalid code, F31 invalid or future date.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var mode='single';
+
+  function mmddyy(d){
+    var m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0'),y=String(d.getFullYear()).slice(-2);
+    return m+dd+y;
+  }
+  $('date').value=mmddyy(new Date());
+
+  function validDate(s){
+    if(!/^\d{6}$/.test(s)) return 'Dates use six digits, MMDDYY.';
+    var m=+s.slice(0,2),d=+s.slice(2,4),y=2000+ +s.slice(4,6);
+    var dt=new Date(y,m-1,d);
+    if(dt.getMonth()!==m-1||dt.getDate()!==d) return s+' is not a real date.';
+    // ACE reads two-digit years; treat 00-99 as 2000-2099 only to catch future dates.
+    if(y>2000 && dt>new Date()) return s+' is in the future. ACE rejects it with F31.';
+    return '';
+  }
+
+  function f111(code,name,dist,date){
+    var s='F111'+(code||'').padEnd(4)+(name||'').padEnd(35)+(dist||'').padEnd(2)+(date||'').padEnd(6);
+    return s.padEnd(80);
+  }
+
+  function envelope(body,errs){
+    var site=$('site').value.toUpperCase(),rid=$('rid').value.toUpperCase(),pw=$('pw').value,
+        port=$('port').value.toUpperCase(),filer=$('filer').value.toUpperCase(),
+        pport=$('pport').value.toUpperCase(),pfiler=$('pfiler').value.toUpperCase(),
+        kn=$('kn').value,ctl=$('ctl').value,
+        app=$('app').value.toUpperCase(),date=$('date').value;
+    if(site.length!==4||rid.length!==3||pw.length!==6||port.length!==4||filer.length!==3||app.length!==2)
+      errs.push('Envelope: site code 4, sender ID 3, password 6, processing port 4, filer code 3 and application ID 2 characters.');
+    if((pport||pfiler)&&(pport.length!==4||pfiler.length!==3)) errs.push('Preparer port is 4 characters and preparer filer is 3. Clear both to leave the preparer out.');
+    if(kn.length>21||ctl.length>21) errs.push('KN number and control ID fit 21 characters each.');
+    var dErr=validDate(date); if(dErr) errs.push('Envelope date: '+dErr);
+    var A=('A'+site+rid+pw+date+'     '+app).padEnd(59)+kn.padEnd(21);
+    var Bb=('B  '+port+filer+app).padEnd(46);
+    if(pport&&pfiler) Bb+=pport+pfiler+'  1   '; else Bb=Bb.padEnd(59);
+    var B=Bb.padEnd(59)+ctl.padEnd(21);
+    var Y=('Y  '+port+filer+app).padEnd(80);
+    var Z=('Z'+site+rid+'      '+date).padEnd(80);
+    return {head:[A,B],body:body,tail:[Y,Z]};
+  }
+
+  function splitTokens(s){return s.toUpperCase().split(/[\s,;]+/).filter(Boolean)}
+  function uniq(a){var seen={},o=[];a.forEach(function(x){if(!seen[x]){seen[x]=1;o.push(x)}});return o}
+
+  function build(){
+    var errs=[],warns=[],recs=[],label='';
+    if(mode==='single'){
+      var c=$('code').value.toUpperCase().trim();
+      if(!/^[A-Z0-9]{4}$/.test(c)) errs.push('A FIRMS code is exactly 4 letters or digits.');
+      else {recs.push(f111(c));label='1 FIRMS code'}
+    } else if(mode==='dist'){
+      recs.push('F101'.padEnd(80));label='all regions, districts and ports';
+    } else if(mode==='list'){
+      var toks=uniq(splitTokens($('codes').value)),bad=[];
+      toks.forEach(function(t){/^[A-Z0-9]{4}$/.test(t)?recs.push(f111(t)):bad.push(t)});
+      if(bad.length) errs.push('Not valid FIRMS codes: '+bad.slice(0,8).join(', ')+(bad.length>8?' and '+(bad.length-8)+' more':'')+'.');
+      if(!toks.length) errs.push('Enter at least one FIRMS code.');
+      label=recs.length+' FIRMS codes';
+    } else {
+      var which=document.querySelector('input[name=allmode]:checked').value;
+      if(which==='date'){
+        var b=$('begin').value.trim(),e=validDate(b);
+        if(e) errs.push(e); else {recs.push(f111('','','',b));label='whole file since '+b}
+        if(!e && b==='010100') warns.push('010100 reads as January 1, 2000. Codes last updated before then are skipped. If that matters, add a district sweep.');
+      } else {
+        var ds=uniq(splitTokens($('districts').value).map(function(t){return t.slice(0,2)})),badd=[];
+        var dd=$('distdate').value.trim(),de=dd?validDate(dd):'';
+        if(de) errs.push(de);
+        ds.forEach(function(t){/^\d{2}$/.test(t)?recs.push(f111('','',t,dd)):badd.push(t)});
+        if(badd.length) errs.push('District codes are 2 digits. Check: '+badd.slice(0,8).join(', ')+'.');
+        if(!ds.length) errs.push('Enter at least one district or port code.');
+        label=recs.length+' districts';
+      }
+    }
+    var env=envelope(recs,warns);
+    return {errs:errs,warns:warns,env:env,label:label,count:recs.length};
+  }
+
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+  function render(){
+    var r=build(),ok=!r.errs.length&&r.count>0;
+    var msg=$('msg');
+    if(r.errs.length){msg.className='msg bad';msg.textContent=r.errs[0]}
+    else if(r.warns.length){msg.className='msg warn';msg.textContent=r.warns.join(' ')+' The EDI below is still generated.'}
+    else {msg.className='msg ok';msg.textContent='Ready.'}
+
+    var edi=$('edi');
+    if(!ok){edi.innerHTML='<pre class="empty">Fix the input above to see the EDI.</pre>';}
+    else{
+      var ruler='',nums='';
+      for(var i=1;i<=80;i++){ruler+=(i%10===0)?'|':'.'; }
+      for(var j=1;j<=8;j++){nums+=String(j*10).padStart(10)}
+      var lines=['<span class="ruler"> '+nums+'</span>','<span class="ruler"> '+ruler+'</span>'];
+      r.env.head.forEach(function(l){lines.push('<span class="env">['+esc(l)+']</span>')});
+      r.env.body.forEach(function(l){lines.push('<span class="q">['+esc(l)+']</span>')});
+      r.env.tail.forEach(function(l){lines.push('<span class="env">['+esc(l)+']</span>')});
+      edi.innerHTML='<pre>'+lines.join('\n')+'</pre>';
+    }
+    var recName=mode==='dist'?'F101':'F111';
+    var total=r.env.head.length+r.env.body.length+r.env.tail.length;
+    var all=r.env.head.concat(r.env.body,r.env.tail),len80=all.every(function(l){return l.length===80});
+    $('status').innerHTML='<span>Query: <b>'+esc(r.label||'none')+'</b></span><span>'+recName+' records: <b>'+r.count+'</b></span><span>Total lines: <b>'+total+'</b></span><span>All 80 characters: <b>'+(len80?'yes':'no')+'</b></span>';
+    $('copy').disabled=!ok;
+    render.last=ok?all.map(function(l){return '['+l+']'}).join('\n'):'';
+  }
+
+  $('copy').addEventListener('click',function(){
+    var t=render.last;if(!t)return;
+    var btn=$('copy');
+    function done(ok){btn.textContent=ok?'Copied':'Select text and copy';setTimeout(function(){btn.textContent='Copy EDI'},1600)}
+    function fallback(){
+      try{var r=document.createRange();r.selectNodeContents($('edi').querySelector('pre'));var s=window.getSelection();s.removeAllRanges();s.addRange(r);done(false)}catch(e){done(false)}
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){done(true)},fallback)}else fallback();
+  });
+
+  document.querySelectorAll('.tab').forEach(function(b){
+    b.addEventListener('click',function(){
+      mode=b.dataset.mode;
+      document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',x===b?'true':'false')});
+      ['single','list','all','dist'].forEach(function(m){$('p-'+m).hidden=mode!==m});
+      render();
+    });
+  });
+
+  var f101Districts=[];
+  function parseF101(){
+    var lines=$('f101resp').value.split(/\r?\n/),off=+$('digits').value,rows=[],seen={};
+    lines.forEach(function(raw){
+      var l=raw.replace(/^\s*\[/,'').replace(/\]\s*$/,'');
+      if(l.slice(0,4)!=='F101'||l.length<33) return;
+      var code=l.slice(4,9).trim(),name=l.slice(9,33).trim();
+      if(!/^\d{5}$/.test(code)) return;
+      var d=code.slice(off,off+2);
+      rows.push({code:code,name:name,d:d});
+    });
+    f101Districts=[];
+    rows.forEach(function(r){if(!seen[r.d]){seen[r.d]=1;f101Districts.push(r.d)}});
+    var t=$('f101tbl');
+    if(!rows.length){t.hidden=true;$('usedist').disabled=true;return}
+    t.hidden=false;
+    t.innerHTML='<table><thead><tr><th>Code</th><th>Name</th><th>District sent in F111</th></tr></thead><tbody>'+
+      rows.slice(0,60).map(function(r){return '<tr><td class="mono">'+esc(r.code)+'</td><td>'+esc(r.name)+'</td><td class="mono">'+esc(r.d)+'</td></tr>'}).join('')+
+      '</tbody></table><p class="hint">'+rows.length+' records read'+(rows.length>60?' (first 60 shown)':'')+', '+f101Districts.length+' distinct districts.</p>';
+    $('usedist').disabled=false;
+  }
+  $('f101resp').addEventListener('input',parseF101);
+  $('digits').addEventListener('change',parseF101);
+  $('usedist').addEventListener('click',function(){
+    $('districts').value=f101Districts.join('\n');
+    document.querySelector('input[name=allmode][value=district]').checked=true;
+    $('all-date').hidden=true;$('all-district').hidden=false;
+    $('tab-all').click();
+  });
+  document.querySelectorAll('input[name=allmode]').forEach(function(r){
+    r.addEventListener('change',function(){
+      var d=document.querySelector('input[name=allmode]:checked').value==='date';
+      $('all-date').hidden=!d;$('all-district').hidden=d;render();
+    });
+  });
+  ['code','codes','begin','districts','distdate','site','rid','pw','port','filer','pport','pfiler','kn','ctl','app','date'].forEach(function(id){
+    $(id).addEventListener('input',render);
+  });
+
+  var FTYPES={'01':'Container Freight Station','02':'Foreign Trade Zone','03':'Pier','04':'Bonded Warehouse','05':'Inspection Facility','06':"Importer's Premises",'07':'Data Processing Site','08':'CBP Administrative Site','09':'CES','10':'Multi Use Bonded'};
+  function fmtDate(d){return /^\d{6}$/.test(d)?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4,6):d}
+  function parseResp(text){
+    var out={kn:'',ctl:'',rows:[],lines:0};
+    var cur=null,q=null;
+    text.split(/\r?\n/).forEach(function(raw){
+      var l=raw.replace(/^\s*\[/,'').replace(/\]\s*$/,'');
+      if(!l.trim()) return;
+      out.lines++; l=l.padEnd(80);
+      var id4=l.slice(0,4);
+      if(l[0]==='A'&&l[1]!==' '){out.kn=l.slice(59,80).trim()}
+      else if(l[0]==='B'&&l.slice(1,3)==='  '){out.ctl=l.slice(59,80).trim()}
+      else if(id4==='F111'){q={code:l.slice(4,8).trim(),name:l.slice(8,43).trim(),dist:l.slice(43,45).trim(),begin:l.slice(45,51).trim()};cur=null}
+      else if(id4==='F211'){
+        cur={port:l.slice(4,8).trim(),code:l.slice(8,12).trim(),status:l[12].trim(),ftype:l.slice(13,15).trim(),name:l.slice(15,50).trim(),upd:l.slice(50,56).trim(),addr:'',city:'',state:'',zip:'',country:'',err:'',msg:''};
+        out.rows.push(cur);
+      }
+      else if(id4==='F311'){if(cur){cur.addr=l.slice(4,39).trim();cur.city=l.slice(39,74).trim();cur.state=l.slice(74,76).trim()}}
+      else if(id4==='F411'){
+        var zip=l.slice(4,13).trim(),ctry=l.slice(13,15).trim(),ec=l.slice(32,35).trim(),em=l.slice(35,75).trim();
+        if(ec){
+          out.rows.push({port:'',code:q?q.code:'',status:'',ftype:'',name:q?(q.name||''):'',upd:'',addr:'',city:'',state:'',zip:'',country:'',err:ec,msg:em,query:q});
+          cur=null;
+        } else if(cur){cur.zip=zip;cur.country=ctry}
+      }
+    });
+    return out;
+  }
+  function csvCell(v){v=String(v==null?'':v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+  function toCsv(r){
+    var head=['kn_number','control_id','district_port','firms_code','status','facility_type_code','facility_type','facility_name','last_update','address','city','state','zip','country','error_code','error_message'];
+    var lines=[head.join(',')];
+    r.rows.forEach(function(x){
+      lines.push([r.kn,r.ctl,x.port,x.code,x.status==='A'?'Active':x.status==='D'?'Deactivated':x.status,x.ftype,FTYPES[x.ftype]||'',x.name,fmtDate(x.upd),x.addr,x.city,x.state,x.zip,x.country,x.err,x.msg].map(csvCell).join(','));
+    });
+    return lines.join('\r\n');
+  }
+  var dl=null,lastCsv='',lastName='firms_query.csv';
+  function renderResp(){
+    var txt=$('resp').value,view=$('rview'),chips=$('rchips'),st=$('rstatus');
+    if(!txt.trim()){view.innerHTML='';chips.innerHTML='';st.innerHTML='';$('csvpre').textContent='Paste a response above to see the CSV.';lastCsv='';$('csvcopy').disabled=true;$('csvsave').disabled=true;return}
+    var r=parseResp(txt),rows=r.rows;
+    var act=rows.filter(function(x){return x.status==='A'}).length,dea=rows.filter(function(x){return x.status==='D'}).length,er=rows.filter(function(x){return x.err}).length;
+    st.innerHTML='<span>Facilities: <b>'+(rows.length-er)+'</b></span><span>Active: <b>'+act+'</b></span><span>Deactivated: <b>'+dea+'</b></span><span>Errors: <b>'+er+'</b></span><span>Lines read: <b>'+r.lines+'</b></span>';
+    var c='';
+    function chip(label,val,mine){
+      if(!val) return '';
+      var cls=mine?(mine===val?'ok':'bad'):'';
+      var note=mine?(mine===val?' (matches)':' (differs from the form)'):'';
+      return '<span class="pill '+cls+'">'+esc(label)+' '+esc(val)+esc(note)+'</span>';
+    }
+    chips.innerHTML=chip('KN number',r.kn,$('kn').value.trim())+chip('Control ID',r.ctl,$('ctl').value.trim());
+    if(!rows.length){view.innerHTML='<p class="msg warn">No F211 or F411 records found. Check that you pasted the whole response.</p>'}
+    else if(rows.length<=10){
+      view.innerHTML='<div class="cards">'+rows.map(function(x){
+        if(x.err) return '<div class="card"><h3><span class="pill bad">Rejected</span>'+esc(x.code||x.name||'Query')+'</h3><span class="meta"><b>'+esc(x.err)+'</b> '+esc(x.msg)+'</span></div>';
+        var addr=[x.addr,[x.city,x.state].filter(Boolean).join(', '),x.zip&&(x.zip.length===9?x.zip.slice(0,5)+'-'+x.zip.slice(5):x.zip),x.country].filter(Boolean).join(' | ');
+        return '<div class="card"><h3>'+esc(x.name)+'</h3><span><span class="pill '+(x.status==='A'?'ok':'warn')+'">'+(x.status==='A'?'Active':x.status==='D'?'Deactivated':esc(x.status))+'</span><span class="meta">'+esc(FTYPES[x.ftype]||('Type '+x.ftype))+'</span></span>'+
+          '<span class="meta">FIRMS code <b class="mono">'+esc(x.code)+'</b> &middot; district/port <b class="mono">'+esc(x.port)+'</b></span>'+
+          '<span class="meta">'+esc(addr)+'</span><span class="meta">Last update <b>'+esc(fmtDate(x.upd))+'</b></span></div>';
+      }).join('')+'</div>';
+    } else {
+      var show=rows.slice(0,100);
+      view.innerHTML='<div class="tbl"><table><thead><tr><th>FIRMS</th><th>Port</th><th>Status</th><th>Type</th><th>Name</th><th>City</th><th>State</th><th>Updated</th></tr></thead><tbody>'+
+        show.map(function(x){return '<tr><td class="mono">'+esc(x.code)+'</td><td class="mono">'+esc(x.port)+'</td><td>'+(x.err?'<span class="pill bad">'+esc(x.err)+'</span>':esc(x.status==='A'?'Active':x.status==='D'?'Deactivated':x.status))+'</td><td>'+esc(FTYPES[x.ftype]||'')+'</td><td>'+esc(x.name||x.msg)+'</td><td>'+esc(x.city)+'</td><td>'+esc(x.state)+'</td><td>'+esc(fmtDate(x.upd))+'</td></tr>'}).join('')+
+        '</tbody></table></div><p class="hint">Showing the first 100 of '+rows.length+' rows. The CSV below has all of them.</p>';
+    }
+    lastCsv=toCsv(r);
+    lastName='firms_'+(r.ctl||'response')+'.csv';
+    var lines=lastCsv.split('\r\n');
+    $('csvpre').textContent=lines.slice(0,60).join('\n')+(lines.length>60?'\n... '+(lines.length-60)+' more rows in the full file':'');
+    $('csvcopy').disabled=false;$('csvsave').disabled=!dl;
+  }
+  $('resp').addEventListener('input',renderResp);
+  ['kn','ctl'].forEach(function(id){$(id).addEventListener('input',renderResp)});
+  $('csvcopy').addEventListener('click',function(){
+    if(!lastCsv)return;var b=$('csvcopy');
+    function done(ok){b.textContent=ok?'Copied':'Select text and copy';setTimeout(function(){b.textContent='Copy CSV'},1600)}
+    function fb(){try{var rg=document.createRange();rg.selectNodeContents($('csvpre'));var se=window.getSelection();se.removeAllRanges();se.addRange(rg)}catch(e){}done(false)}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(lastCsv).then(function(){done(true)},fb)}else fb();
+  });
+  $('csvsave').addEventListener('click',function(){
+    if(!dl||!lastCsv)return;var b=$('csvsave');
+    dl.save({filename:lastName,data:lastCsv}).then(function(){b.textContent='Saved';setTimeout(function(){b.textContent='Save CSV file'},1600)},function(e){
+      if(e&&e.code==='declined')return;
+      b.textContent='Save unavailable, use Copy';setTimeout(function(){b.textContent='Save CSV file'},2400)});
+  });
+  try{ if(window.claude&&window.claude.use){window.claude.use('downloads').then(function(d){ if(d){dl=d;$('csvsave').hidden=false;$('csvsave').disabled=!lastCsv} },function(){})} }catch(e){}
+  function newCtl(){var c='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',o='';
+    var a=new Uint32Array(20);(window.crypto||{getRandomValues:function(x){for(var i=0;i<x.length;i++)x[i]=Math.random()*4294967296}}).getRandomValues(a);
+    for(var i=0;i<20;i++)o+=c[a[i]%36];return o}
+  $('genctl').addEventListener('click',function(){$('ctl').value=newCtl();render()});
+  $('ctl').value=newCtl();
+  render();
+})();
+</script>
