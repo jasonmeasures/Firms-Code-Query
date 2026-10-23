@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS extract_jobs (
 CREATE TABLE IF NOT EXISTS extract_requests (
     id              VARCHAR(36) PRIMARY KEY,
     control_id      VARCHAR(20) NOT NULL UNIQUE,
-    kn_number       VARCHAR(21) NOT NULL UNIQUE,
+    kn_number       VARCHAR(21) NOT NULL DEFAULT '',
     file_code       VARCHAR(4) NOT NULL,
     query_type      VARCHAR(20) NOT NULL,
     params          JSONB,

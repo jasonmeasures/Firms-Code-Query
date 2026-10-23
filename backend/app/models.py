@@ -55,7 +55,7 @@ class ExtractRequest(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     control_id: Mapped[str] = mapped_column(String(20), unique=True, index=True)
-    kn_number: Mapped[str] = mapped_column(String(21), unique=True)
+    kn_number: Mapped[str] = mapped_column(String(21), default="")
     file_code: Mapped[str] = mapped_column(String(4))
     query_type: Mapped[str] = mapped_column(String(20))
     params: Mapped[dict | None] = mapped_column(JSON, nullable=True)

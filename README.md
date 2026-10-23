@@ -35,9 +35,11 @@ That cap is local until CBP confirms a limit.
 
 ## Identifiers
 
-The A and B user-data fields are the batch-control columns the extract chapter
-points at. The KN number is A positions 60-80. The control ID is 20 letters or
-digits in B positions 60-80, and it is the MQ correlation id. ACE echoes both.
+The extract chapter points A and B at the ABI Batch and Block Control chapter.
+A positions 60-80 are Transmitter's User Data Text (21X, optional). These
+queries are not a shipment, so that field is space-filled. The control ID is
+20 letters or digits in B positions 60-80, and it is the MQ correlation id.
+ACE echoes both when present.
 The communication password is A positions 9-14 and comes from
 `KN_TRANSMITTER_PASSWORD`. It is not hard-coded. API screens mask it. The mock
 outbox file keeps the real record.

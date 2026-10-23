@@ -85,6 +85,7 @@ def test_round_trip_persists_facility_and_csv(client):
     assert body['mq_send_state'] == 'SENT'
     control = body['control_id']
     kn = body['kn_number']
+    assert kn == ''
     outbox = Path(os.environ['MQ_OUTBOX_DIR']) / f'{control}.edi'
     assert outbox.exists()
     assert 'KLEAR1' in outbox.read_text()

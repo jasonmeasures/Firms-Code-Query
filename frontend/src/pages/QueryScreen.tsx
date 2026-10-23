@@ -13,20 +13,12 @@ function controlId() {
   return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
 }
 
-function knNumber(fileCode: string) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(6));
-  const tail = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
-  return `KN-${fileCode}-${tail}`.slice(0, 21);
-}
-
 export default function QueryScreen() {
   const { fileCode = '' } = useParams();
   const navigate = useNavigate();
   const [file, setFile] = useState<FileSpec | null>(null);
   const [mode, setMode] = useState<ModeSpec | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
-  const [kn, setKn] = useState('');
   const [control, setControl] = useState('');
   const [edi, setEdi] = useState('');
   const [all80, setAll80] = useState(false);
@@ -40,14 +32,13 @@ export default function QueryScreen() {
       setFile(found);
       const first = found?.modes.find((item) => role === 'admin' || !item.admin_only) || found?.modes[0] || null;
       setMode(first);
-      setKn(found ? knNumber(found.file_code) : '');
       setControl(controlId());
       setParams({});
     }).catch((err: Error) => setError(err.message));
   }, [fileCode, role]);
 
   useEffect(() => {
-    if (!file || !mode || !kn || !control) return;
+    if (!file || !mode || !control) return;
     if (mode.admin_only && role !== 'admin') {
       setEdi('');
       setError('This load is limited to an admin.');
@@ -58,7 +49,7 @@ export default function QueryScreen() {
         file_code: file.file_code,
         query_type: mode.id,
         params,
-        kn_number: kn,
+        kn_number: '',
         control_id: control,
       }).then((res) => {
         setEdi(res.edi);
@@ -70,7 +61,7 @@ export default function QueryScreen() {
       });
     }, 250);
     return () => window.clearTimeout(handle);
-  }, [file, mode, params, kn, control, role]);
+  }, [file, mode, params, control, role]);
 
   const submit = async () => {
     if (!file || !mode) return;
@@ -80,7 +71,7 @@ export default function QueryScreen() {
         file_code: file.file_code,
         query_type: mode.id,
         params,
-        kn_number: kn,
+        kn_number: '',
         control_id: control,
       });
       if (result.job) navigate(`/jobs/${result.job.id}`);
@@ -135,21 +126,14 @@ export default function QueryScreen() {
             <span className="kn-help font-normal">Positions {field.positions}</span>
           </label>
         ))}
-        <div className="flex flex-wrap gap-3">
-          <label className="flex flex-column gap-1 font-bold text-sm">
-            KN number
-            <InputText value={kn} maxLength={21} onChange={(event) => setKn(event.target.value.toUpperCase())} />
-            <span className="kn-help font-normal">A record, positions 60-80. ACE echoes this back.</span>
-          </label>
-          <label className="flex flex-column gap-1 font-bold text-sm" style={{ flex: '1 1 280px' }}>
-            Control ID
-            <span className="flex gap-2">
-              <InputText value={control} maxLength={20} onChange={(event) => setControl(event.target.value.toUpperCase())} className="w-full" />
-              <Button type="button" label="New" outlined onClick={() => setControl(controlId())} />
-            </span>
-            <span className="kn-help font-normal">B record, positions 60-80. This is the correlation id.</span>
-          </label>
-        </div>
+        <label className="flex flex-column gap-1 font-bold text-sm" style={{ flex: '1 1 280px' }}>
+          Control ID
+          <span className="flex gap-2">
+            <InputText value={control} maxLength={20} onChange={(event) => setControl(event.target.value.toUpperCase())} className="w-full" />
+            <Button type="button" label="New" outlined onClick={() => setControl(controlId())} />
+          </span>
+          <span className="kn-help font-normal">B record, positions 60-80. This is the correlation id. A positions 60-80 stay blank: these queries are not a shipment.</span>
+        </label>
       </div>
       {error && <Message severity="error" text={error} className="mb-3 w-full" />}
       <div className="flex justify-content-between align-items-center mb-2">

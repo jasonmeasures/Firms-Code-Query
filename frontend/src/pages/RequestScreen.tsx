@@ -55,7 +55,9 @@ export default function RequestScreen() {
       <StatusTimeline request={row} />
       {parsed && (
         <div className="flex gap-2 my-3">
-          <Tag severity={knEcho === 'differ' ? 'danger' : 'success'} value={`KN ${parsed.kn_number || '—'} ${knEcho === 'match' ? 'matches' : knEcho === 'differ' ? 'differs' : ''}`} />
+          {knEcho !== 'empty' && (
+            <Tag severity={knEcho === 'differ' ? 'danger' : 'success'} value={`A user data ${parsed.kn_number} ${knEcho === 'differ' ? 'differs' : 'matches'}`} />
+          )}
           <Tag severity={controlEcho === 'differ' ? 'danger' : 'success'} value={`Control ${parsed.control_id || '—'} ${controlEcho === 'match' ? 'matches' : controlEcho === 'differ' ? 'differs' : ''}`} />
         </div>
       )}

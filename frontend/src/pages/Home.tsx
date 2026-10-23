@@ -45,7 +45,6 @@ export default function Home() {
           <Column field="file_code" header="File" />
           <Column field="query_type" header="Query" />
           <Column field="control_id" header="Control ID" />
-          <Column field="kn_number" header="KN number" />
           <Column field="status" header="Status" body={(row: ExtractRequest) => <span className={statusClass(row.status)}>{row.status}</span>} />
         </DataTable>
       </Card>

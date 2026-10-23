@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.catalog import find_file
 from app.config import get_settings
-from app.db import next_kn_sequence
 from app.edi.build import build_block, split_codes
 from app.edi.envelope import Identity, unbracket
 from app.edi.parse import parse_response
@@ -53,11 +52,6 @@ APP_IDS = {'F101': 'FQ', 'F102': 'FQ', 'F104': 'FQ', 'F106': 'FQ', 'F110': 'HB',
 def new_control_id() -> str:
     alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     return ''.join(secrets.choice(alphabet) for _ in range(20))
-
-
-def new_kn_number(file_code: str, sequence: int) -> str:
-    stamp = datetime.now().strftime('%m%d')
-    return f'KN-{file_code}-{stamp}-{sequence:04d}'[:21]
 
 
 def _build_params(file_code: str, query_type: str, params: dict) -> tuple[str, dict]:
@@ -150,7 +144,7 @@ def render_edi(file_code: str, query_type: str, params: dict, kn_number: str, co
 
 def preview(user: User, file_code: str, query_type: str, params: dict, kn_number: str | None, control_id: str | None) -> dict:
     _guard(user, file_code, query_type)
-    kn = (kn_number or '').strip().upper() or 'KN-PREVIEW'
+    kn = (kn_number or '').strip().upper()
     control = (control_id or '').strip().upper() or 'PREVIEWPREVIEWPREVIE'
     edi = render_edi(file_code, query_type, params or {}, kn, control)
     lines = edi.split('\n')
@@ -178,9 +172,9 @@ def _store_request(
     control = (control_id or '').strip().upper() or new_control_id()
     if session.scalar(select(ExtractRequest).where(ExtractRequest.control_id == control)):
         raise HTTPException(status_code=409, detail='That control ID is already used. Generate another.')
-    kn = (kn_number or '').strip().upper() or new_kn_number(file_code, next_kn_sequence(session))
-    if session.scalar(select(ExtractRequest).where(ExtractRequest.kn_number == kn)):
-        raise HTTPException(status_code=409, detail='That KN number is already used.')
+    kn = (kn_number or '').strip().upper()
+    if kn and session.scalar(select(ExtractRequest).where(ExtractRequest.kn_number == kn)):
+        raise HTTPException(status_code=409, detail='That A-record user data is already used.')
     edi = render_edi(file_code, query_type, params, kn, control)
     row = ExtractRequest(
         control_id=control,

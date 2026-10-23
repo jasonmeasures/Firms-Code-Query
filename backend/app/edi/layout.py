@@ -14,7 +14,7 @@ A_SENDER = (6, 8)
 A_PASSWORD = (9, 14)
 A_DATE = (15, 20)
 A_APP = (26, 27)
-A_KN = (60, 80)  # user data, echoed, up to 21
+A_KN = (60, 80)  # Transmitter's User Data Text, 21X, optional. Space-fill. Not a shipment KN.
 
 B_PORT = (4, 7)
 B_FILER = (8, 10)

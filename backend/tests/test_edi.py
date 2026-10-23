@@ -84,6 +84,20 @@ def test_a_record_positions():
     assert cut(line, 60, 80).startswith('KN-09PC-11:EE')
 
 
+def test_a_record_user_data_may_be_blank():
+    edi = build_block(
+        IDENTITY,
+        when=WHEN,
+        kn_number="",
+        control_id="2TGFEC9WQDMLKMFSFASI",
+        file_code="FIRMS",
+        query_type="CODE",
+        params={"code": "E364"},
+    )
+    line = edi.split("\n")[0]
+    assert cut(line, 60, 80) == " " * 21
+
+
 def test_b_record_preparer_and_control():
     line = _lines(REQUEST)[1]
     assert cut(line, 1, 3) == 'B  '

@@ -136,7 +136,7 @@ def unbracket(edi: str) -> str:
 
 
 def read_user_data(edi: str) -> tuple[str, str, str]:
-    """Return (KN number, control ID, application id) from the A and B records."""
+    """Return (A user data, control ID, application id) from the A and B records."""
     from app.edi.layout import A_KN, B_APP, B_CONTROL, take
 
     lines = [ln for ln in unbracket(edi).split("\n") if ln.strip()]
