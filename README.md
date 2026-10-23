@@ -81,10 +81,16 @@ response on the request screen (admin, dev only) or post it to
 
 ## Tests
 
+Scenarios and the UAT script live in `docs/handoff/test-plan.md` and `docs/handoff/use-cases.md`.
+
 ```bash
 cd backend && .venv/bin/pytest -q
 cd frontend && npm test
+cd frontend && npm run test:regression
 ```
+
+Backend: golden EDI, F411 catalog, mock MQ, jobs/sweep, phase-2 entry validation, and acceptance paths.
+Frontend: query-rule regression, entry checks, preview/timeline/cards, keyboard, and axe.
 
 ## For engineering
 

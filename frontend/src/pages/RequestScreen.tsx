@@ -11,6 +11,7 @@ import { api, demoUser, type ExtractRequest } from '../api';
 import EdiPreview from '../components/EdiPreview';
 import StatusTimeline from '../components/StatusTimeline';
 import { echoMatches } from '../lib/status';
+import { CARD_TABLE_THRESHOLD, useCards } from '../lib/validation';
 
 function text(value: unknown) {
   return value == null ? '' : String(value);
@@ -65,7 +66,7 @@ export default function RequestScreen() {
       <TabView>
         <TabPanel header="Response">
           {rows.length === 0 && <p>No parsed rows yet.</p>}
-          {rows.length > 0 && rows.length <= 10 && (
+          {useCards(rows.length) && (
             <div className="grid">
               {rows.map((item, index) => (
                 <div key={index} className="col-12 md:col-6">
@@ -90,7 +91,7 @@ export default function RequestScreen() {
               ))}
             </div>
           )}
-          {rows.length > 10 && (
+          {rows.length > CARD_TABLE_THRESHOLD && (
             <>
               <label className="block mb-2 font-bold text-sm" htmlFor="row-search">Search</label>
               <InputText id="row-search" className="mb-2 w-full" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Filter the rows" />

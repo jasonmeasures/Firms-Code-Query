@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:regression": "vitest run src/lib/validation.regression.test.ts src/lib/entry.test.ts"
   },
   "dependencies": {
     "primeflex": "^3.3.1",
@@ -18,9 +19,15 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest-axe": "^3.5.9",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "jest-axe": "^9.0.0",
+    "jsdom": "^25.0.1",
     "typescript": "^5.6.3",
     "vite": "^6.0.3",
     "vitest": "^3.2.7"

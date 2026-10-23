@@ -3,56 +3,9 @@
 import os
 from pathlib import Path
 
-import pytest
-
-os.environ.setdefault('APP_ENV', 'dev')
-os.environ.setdefault('KN_SITE_CODE', '2809')
-os.environ.setdefault('KN_SENDER_ID', 'S1F')
-os.environ.setdefault('KN_TRANSMITTER_PASSWORD', 'KLEAR1')
-os.environ.setdefault('KN_PROCESSING_PORT', '2809')
-os.environ.setdefault('KN_FILER_CODE', 'S1F')
-os.environ.setdefault('KN_PREPARER_PORT', '2809')
-os.environ.setdefault('KN_PREPARER_FILER', 'S1F')
-os.environ.setdefault('EXTRACT_CALLBACK_SECRET', 'test-secret')
-os.environ.setdefault('MQ_MODE', 'mock')
-os.environ.setdefault('DATABASE_URL', 'sqlite:///' + str(Path(__file__).resolve().parent / 'test_extract.db'))
-os.environ.setdefault('MQ_OUTBOX_DIR', str(Path(__file__).resolve().parent / 'mq_outbox'))
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.db import SessionLocal, engine, init_db  # noqa: E402
-from app.models import Base, FirmsFacilityHistory  # noqa: E402
-from main import app  # noqa: E402
-
-RESPONSE = """\
-[A2809S1F      101826     FO                                KN-PLACEHOLDER       ]
-[B  2809S1FFO                                               CONTROLCONTROLCONTRO ]
-[F2114601E364A03PORT LIBERTY - BAYONNE             101726                        ]
-[F311302 PORT JERSEY BLVD               JERSEY CITY                        NJ    ]
-[F411073054569US                                                                 ]
-[Y  2809S1FFO                                                                    ]
-[Z2809S1F      101826                                                            ]
-"""
-
-
-@pytest.fixture(autouse=True)
-def fresh_db():
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-    init_db()
-    yield
-
-
-@pytest.fixture
-def client():
-    with TestClient(app) as test_client:
-        yield test_client
-
-
-def _response_for(control: str, kn: str) -> str:
-    text = RESPONSE.replace('CONTROLCONTROLCONTRO', control)
-    text = text.replace('KN-PLACEHOLDER       ', kn.ljust(21))
-    return text
+from app.db import SessionLocal
+from app.models import FirmsFacilityHistory
+from tests.conftest import fo_for as _response_for
 
 
 def test_operator_cannot_load_the_whole_file(client):

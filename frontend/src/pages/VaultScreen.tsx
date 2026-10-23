@@ -49,6 +49,20 @@ export default function VaultScreen() {
         ))}
       </ul>
       {admin && (
+        <section className="mb-4">
+          <h2>Failed sends</h2>
+          <p className="kn-help">Local stand-in for the transmitter dead-letter queue. An admin can retry these.</p>
+          {(vault?.dead_letters || []).length === 0 && <p>None.</p>}
+          {(vault?.dead_letters || []).map((row) => (
+            <article key={row.id} className="kn-card mb-2">
+              <Link to={`/requests/${row.id}`}>{row.control_id}</Link>
+              <span className="kn-help"> {row.mq_send_error}</span>
+              <Button className="ml-2" type="button" label="Retry" onClick={() => api.retry(row.id).then(load).catch((err: Error) => setError(err.message))} />
+            </article>
+          ))}
+        </section>
+      )}
+      {admin && (
         <section>
           <h2>Unmatched responses</h2>
           <p className="kn-help">Visible to admins only. A response with an unknown control ID is kept here.</p>

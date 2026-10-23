@@ -54,6 +54,11 @@ export const api = {
   carriers: (q = '') => request<{ rows: Carrier[] }>(`/api/extract/reference/carriers?q=${encodeURIComponent(q)}`),
   vault: () => request<Vault>('/api/extract/vault'),
   mq: () => request<MqStatus>('/api/extract/mq/status'),
+  validateFirms: (locations: { firms_code: string; source: string }[]) =>
+    request<EntryValidation>('/api/extract/reference/firms/validate', {
+      method: 'POST',
+      body: JSON.stringify({ locations }),
+    }),
 };
 
 export interface FieldSpec {
@@ -189,5 +194,15 @@ export interface Change {
 export interface Named { code: string; name: string; city?: string; state?: string; zip?: string }
 export interface Country { iso: string; name: string; spi: string }
 export interface Carrier { code: string; name: string; mode: string; mode_name: string }
-export interface Vault { requests: ExtractRequest[]; orphans: { id: string; control_id: string | null; kn_number: string | null; raw_text: string; received_at: string | null }[] }
+export interface Vault {
+  requests: ExtractRequest[];
+  orphans: { id: string; control_id: string | null; kn_number: string | null; raw_text: string; received_at: string | null }[];
+  dead_letters: ExtractRequest[];
+}
+export interface EntryValidation {
+  ok: boolean;
+  blocked: Array<Record<string, unknown>>;
+  warnings: Array<Record<string, unknown>>;
+  results: Array<Record<string, unknown>>;
+}
 export interface MqStatus { mode: string; outbound_queue: string; inbound_queue: string; reachable: boolean; detail: string }

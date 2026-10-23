@@ -30,8 +30,8 @@ def current_user(
     x_demo_user: str | None = Header(default=None),
 ) -> User:
     settings = get_settings()
-    if settings.app_env == 'prod':
-        raise HTTPException(status_code=401, detail='Production sign-in is not connected yet')
+    if not settings.is_dev:
+        raise HTTPException(status_code=401, detail='Sign-in is not connected yet. Demo users need APP_ENV=dev.')
     user_id = (x_demo_user or 'operator').strip().lower()
     user = session.get(User, user_id)
     if user is None:

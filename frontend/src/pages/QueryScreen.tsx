@@ -6,6 +6,7 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { Message } from 'primereact/message';
 import { api, demoUser, type FileSpec, type ModeSpec } from '../api';
 import EdiPreview from '../components/EdiPreview';
+import { queryIssues } from '../lib/validation';
 
 function controlId() {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -41,7 +42,15 @@ export default function QueryScreen() {
     if (!file || !mode || !control) return;
     if (mode.admin_only && role !== 'admin') {
       setEdi('');
+      setAll80(false);
       setError('This load is limited to an admin.');
+      return;
+    }
+    const issues = queryIssues(file.file_code, mode.id, params);
+    if (issues.length) {
+      setEdi('');
+      setAll80(false);
+      setError(issues.join(' '));
       return;
     }
     const handle = window.setTimeout(() => {
