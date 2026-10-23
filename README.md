@@ -73,6 +73,8 @@ npm install
 npm run dev
 ```
 
+`APP_ENV` defaults to `prod`, which refuses demo sign-in. `.env.example` sets `APP_ENV=dev` for local runs. A non-dev start also refuses the dev password, the dev callback secret and a `*` CORS list; set `CORS_ORIGINS` to the UI origin.
+
 Open http://localhost:3000. `GET /health` returns `{"status": "ok"}`.
 
 Nothing is sent to ACE. `MQ_MODE=mock` writes `backend/mq_outbox/`. Paste a
@@ -94,7 +96,13 @@ Frontend: query-rule regression, entry checks, preview/timeline/cards, keyboard,
 
 ## For engineering
 
-`backend/app/migrations/add_extract_tables.py` is provisional Postgres DDL.
+Postgres DDL is generated from the models: `cd backend && python -m app.migrations.generate_ddl > migrations/001_extract_reference.sql` (a test fails if the file is stale). It is provisional and has not been run against a live Postgres.
+
+Parsed rows are written through `ReferenceSink` in `backend/app/repository.py`. To land them in the CHB tables, add a sink and return it from `get_reference_sink()`.
+
+Install `requirements-dev.txt` for tests; `requirements-live.txt` adds `pymqi` for `MQ_MODE=live`. The stored EDI has the password blanked; it is restored only for the queue PUT.
+
+The provisional note:
 Point it at the CHB tables when that repository is available. Dead-letter,
 backoff, response timeouts, and a queue-depth console are waiting on the
 Engine transmitter.

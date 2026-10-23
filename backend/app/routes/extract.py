@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hmac
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
@@ -243,7 +245,7 @@ def callback(
     secret = get_settings().callback_secret
     if not secret:
         raise HTTPException(status_code=503, detail='EXTRACT_CALLBACK_SECRET is not set')
-    if x_callback_secret != secret:
+    if not hmac.compare_digest((x_callback_secret or '').encode(), secret.encode()):
         raise HTTPException(status_code=401, detail='Callback secret rejected')
     return apply_response(session, body.message, body.correlation_id)
 

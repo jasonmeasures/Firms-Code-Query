@@ -1,0 +1,3 @@
+-r requirements.txt
+# Needs the IBM MQ client libraries installed on the host.
+pymqi
