@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.edi.build import build_block, split_codes
 from app.edi.envelope import Identity, unbracket
 from app.edi.parse import parse_response
+from app.edi.rules import extract_rule_errors
 from app.models import (
     ExtractJob,
     ExtractOrphan,
@@ -316,6 +317,9 @@ def retry(session: Session, user: User, row: ExtractRequest, confirm: bool) -> E
         raise HTTPException(status_code=409, detail=[
             'The original send may already have been delivered. Retry with confirm_possible_duplicate=true.',
         ])
+    rule_errors = extract_rule_errors(row.edi_text or '')
+    if rule_errors:
+        raise HTTPException(status_code=422, detail=rule_errors)
     log.info('extract.retry control_id=%s request_id=%s user=%s', row.control_id, row.id, user.id)
     transmit(session, row, user.id)
     session.refresh(row)

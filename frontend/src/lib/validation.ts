@@ -88,6 +88,29 @@ export function queryIssues(fileCode: string, queryType: string, params: Record<
   if (fileCode === 'F106' && queryType === 'CODE') {
     const code = (params.carrier_code || '').trim().toUpperCase();
     if (!/^[A-Z0-9]{2,4}$/.test(code)) return ['Carrier code must be 2 to 4 letters or digits'];
+    return [];
+  }
+  if (fileCode === 'F106' && queryType === 'NAME') {
+    const name = (params.carrier_name || '').trim();
+    if (!name) return ['Carrier name is required'];
+    if (name.length > 35) return ['Carrier name is longer than 35 characters'];
+    return [];
+  }
+  if (fileCode === 'F106' && (queryType === 'AIR' || queryType === 'AIR_ALL')) {
+    return [];
+  }
+  if (fileCode === 'F110' && queryType === 'RANGE') {
+    const issues: string[] = [];
+    const update = (params.update_number || '').trim();
+    const fromHts = (params.from_number || params.from_hts || '').trim().toUpperCase();
+    const toHts = (params.to_number || params.to_hts || '').trim().toUpperCase();
+    if (update && !/^\d{1,4}$/.test(update)) issues.push('HTS update number must be 1 to 4 digits');
+    if (fromHts && !/^[A-Z0-9]{1,10}$/.test(fromHts)) issues.push('From HTS number must be 1 to 10 letters or digits');
+    if (toHts && !/^[A-Z0-9]{1,10}$/.test(toHts)) issues.push('To HTS number must be 1 to 10 letters or digits');
+    return issues;
+  }
+  if ((fileCode === 'F101' || fileCode === 'F102' || fileCode === 'F104') && queryType === 'FULL') {
+    return [];
   }
   return [];
 }

@@ -6,7 +6,9 @@ same status words on every file.
 
 This is its own program. The 5106 tool was the pattern for the PrimeReact
 screens and for the mock MQ path (outbox, callback, admin retry, vault). Its
-repository is not modified and its envelope is not reused.
+repository is not modified and its envelope is not reused. Vault add/edit
+rules, and where they must not follow 5106, are in
+[`docs/handoff/edi-vault.md`](docs/handoff/edi-vault.md).
 
 ## Files in the June 25, 2018 chapter
 
@@ -99,7 +101,7 @@ cd frontend && npm run test:regression
 ```
 
 Backend: golden EDI, F411 catalog, mock MQ, jobs/sweep, phase-2 entry validation, and acceptance paths.
-Frontend: query-rule regression, entry checks, preview/timeline/cards, keyboard, and axe.
+Frontend: query-rule regression, entry checks, preview/timeline/cards, keyboard, axe, and vault chrome (EDIT / COPY / DOWNLOAD / OPEN REQUEST).
 
 ## For engineering
 

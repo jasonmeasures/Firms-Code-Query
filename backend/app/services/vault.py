@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.edi.envelope import read_user_data, unbracket
+from app.edi.rules import extract_rule_errors
 from app.edi.view import annotate, infer_file_code, mq_envelope, normalize_and_validate_edi
 from app.models import ExtractOrphan, ExtractRequest, User
 from app.mq.outbound import ExtractOutbound
@@ -28,6 +29,15 @@ def _check_item_id(item_id: str) -> None:
 
 def _outbox() -> Path:
     return ExtractOutbound().outbox
+
+
+def _is_vault_scratch(row: ExtractRequest | None) -> bool:
+    """Pasted vault EDI and orphan outbox files are not ACE extract queries."""
+    return row is None or row.query_type in {"VAULT", "OUTBOX"}
+
+
+def _blocks_rule_errors(row: ExtractRequest | None) -> bool:
+    return not _is_vault_scratch(row)
 
 
 def edit_lock_reason(row: ExtractRequest | None) -> str | None:
@@ -123,6 +133,7 @@ def _item(row: ExtractRequest | None, item_id: str, edi: str, *, with_body: bool
                 filename=filename,
                 request_id=row.id if row else "",
             ),
+            "warnings": extract_rule_errors(edi),
         })
     return payload
 
@@ -164,10 +175,12 @@ def list_vault(session: Session, user: User) -> dict:
 
 def check_edi(raw: str) -> dict:
     edi, errors = normalize_and_validate_edi(raw)
+    rule_errors = extract_rule_errors(edi or raw)
     records = annotate(edi or raw)
     return {
-        "ok": not errors,
+        "ok": not errors and not rule_errors,
         "errors": errors,
+        "rule_errors": rule_errors,
         "edi": edi if not errors else raw,
         "records": records,
         "line_count": len(records),
@@ -222,6 +235,9 @@ def edit_item(session: Session, user: User, item_id: str, raw: str) -> dict:
     _, new_control, _ = read_user_data(edi)
     if old_control and new_control and old_control != new_control:
         raise HTTPException(status_code=422, detail=["Control ID cannot be changed in the vault"])
+    rule_errors = extract_rule_errors(edi)
+    if rule_errors and _blocks_rule_errors(row):
+        raise HTTPException(status_code=422, detail=rule_errors)
     if row:
         old_hash = hashlib.sha256((row.edi_text or "").encode()).hexdigest()[:12]
         new_hash = hashlib.sha256(edi.encode()).hexdigest()[:12]

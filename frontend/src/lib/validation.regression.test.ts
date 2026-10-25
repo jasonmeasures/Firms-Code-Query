@@ -41,6 +41,22 @@ describe('REG — F411 catalog', () => {
   });
 });
 
+describe('REG — every extract file, not FIRMS only', () => {
+  it('accepts full-file F101/F102/F104 and F106 air', () => {
+    expect(queryIssues('F101', 'FULL', {})).toEqual([]);
+    expect(queryIssues('F102', 'FULL', {})).toEqual([]);
+    expect(queryIssues('F104', 'FULL', {})).toEqual([]);
+    expect(queryIssues('F106', 'AIR', {})).toEqual([]);
+    expect(queryIssues('F106', 'CODE', { carrier_code: 'X' })[0]).toMatch(/Carrier code/);
+    expect(queryIssues('F106', 'NAME', { carrier_name: '' })[0]).toMatch(/Carrier name/);
+  });
+
+  it('accepts a blank F110 range and rejects a bad HTS shape', () => {
+    expect(queryIssues('F110', 'RANGE', {})).toEqual([]);
+    expect(queryIssues('F110', 'RANGE', { from_number: '!!' })[0]).toMatch(/HTS/);
+  });
+});
+
 describe('REG — response layout switch', () => {
   it('uses cards at 10 rows and a table at 11', () => {
     expect(useCards(1)).toBe(true);

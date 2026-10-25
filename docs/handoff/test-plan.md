@@ -82,6 +82,8 @@ cd frontend && npm run test:regression
 | TP-UI-02 | Timeline | Built → Sent → Parsed | `StatusTimeline.test.tsx` |
 | TP-UI-03 | Response | Cards ≤10, table >10 | `RequestScreen.test.tsx` |
 | TP-UI-04 | A11y | Keyboard on mode tabs; axe on query + timeline | `*.test.tsx` |
+| TP-UI-05 | Vault chrome | Same 5106 tabs and EDIT / COPY / DOWNLOAD; extract OPEN REQUEST | `VaultScreen.test.tsx`, `ediVaultChrome.test.ts` |
+| TP-UT-09 | Vault | Add/edit/lock, password, download, reject 5106 T1 | `tests/test_vault.py` |
 
 ---
 

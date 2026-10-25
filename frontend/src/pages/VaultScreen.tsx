@@ -5,6 +5,7 @@ import { Card } from 'primereact/card';
 import { InputText } from 'primereact/inputtext';
 import { api, demoUser, type MqStatus, type UsageSummary, type VaultCheck, type VaultItem } from '../api';
 import EdiEditor from '../components/EdiEditor';
+import { copyEdi, EDI_VAULT_CHROME, EDI_VAULT_EXTRACT, EDI_VAULT_TABS } from '../lib/ediVaultChrome';
 import { fieldLegend, rulerText } from '../lib/ediPositions';
 import { statusClass } from '../lib/status';
 
@@ -106,7 +107,6 @@ export default function VaultScreen() {
     try {
       const result = await api.checkVaultItem(draftEdi);
       setCheck(result);
-      if (!result.ok) setError(result.errors.join(' '));
     } catch (err) {
       setCheck(null);
       setError(err instanceof Error ? err.message : 'EDI check failed');
@@ -153,10 +153,10 @@ export default function VaultScreen() {
   return (
     <div className="p-4 flex flex-column gap-3">
       <div className="flex gap-2 flex-wrap">
-        <button type="button" className={`kn-nav-btn${tab === 'mq' ? ' active' : ''}`} onClick={() => setTab('mq')}>MQ connection</button>
-        <button type="button" className={`kn-nav-btn${tab === 'edi' ? ' active' : ''}`} onClick={() => { setTab('edi'); loadVault(); }}>EDI vault</button>
-        <button type="button" className={`kn-nav-btn${tab === 'usage' ? ' active' : ''}`} onClick={() => { setTab('usage'); loadUsage(); }}>Usage</button>
-        <button type="button" className={`kn-nav-btn${tab === 'ref' ? ' active' : ''}`} onClick={() => setTab('ref')}>CATAIR reference</button>
+        <button type="button" className={`kn-nav-btn${tab === 'mq' ? ' active' : ''}`} onClick={() => setTab('mq')}>{EDI_VAULT_TABS.mq}</button>
+        <button type="button" className={`kn-nav-btn${tab === 'edi' ? ' active' : ''}`} onClick={() => { setTab('edi'); loadVault(); }}>{EDI_VAULT_TABS.edi}</button>
+        <button type="button" className={`kn-nav-btn${tab === 'usage' ? ' active' : ''}`} onClick={() => { setTab('usage'); loadUsage(); }}>{EDI_VAULT_TABS.usage}</button>
+        <button type="button" className={`kn-nav-btn${tab === 'ref' ? ' active' : ''}`} onClick={() => setTab('ref')}>{EDI_VAULT_TABS.ref}</button>
       </div>
       {error && tab !== 'edi' && <p role="alert">{error}</p>}
 
@@ -198,7 +198,7 @@ export default function VaultScreen() {
                 <InputText className="w-full" value={channel} onChange={(event) => setChannel(event.target.value)} />
               </div>
             </div>
-            <Button label="TEST CONNECTION" className="mt-3" loading={busy} onClick={test} />
+            <Button label={EDI_VAULT_CHROME.testConnection} className="mt-3" loading={busy} onClick={test} />
             {message && <p className="text-sm mt-3 mb-0">{message}</p>}
           </div>
         </Card>
@@ -210,8 +210,8 @@ export default function VaultScreen() {
             <Card className="shadow-2">
               <div className="p-3">
                 <div className="flex justify-content-between align-items-center mb-3">
-                  <h2 className="m-0" style={{ color: '#003F5B' }}>EDI vault</h2>
-                  <Button label="ADD EDI" className="p-button-sm" onClick={startAdd} />
+                  <h2 className="m-0" style={{ color: '#003F5B' }}>{EDI_VAULT_TABS.edi}</h2>
+                  <Button label={EDI_VAULT_CHROME.add} className="p-button-sm" onClick={startAdd} />
                 </div>
                 {items.length === 0 && <p className="text-sm" style={{ color: '#64748B' }}>No EDI yet. Submit a query or add one here.</p>}
                 {items.map((item) => (
@@ -253,7 +253,7 @@ export default function VaultScreen() {
                     <div className="flex gap-2 mb-3 flex-wrap">
                       {!editing && preview && preview.editable !== false && (
                         <Button
-                          label="EDIT EDI"
+                          label={EDI_VAULT_CHROME.edit}
                           className="p-button-sm"
                           onClick={() => {
                             setDraftEdi(preview.edi || preview.edi_raw || '');
@@ -264,10 +264,10 @@ export default function VaultScreen() {
                       )}
                       {editing && (
                         <>
-                          <Button label="CHECK EDI" className="p-button-outlined p-button-sm" loading={busy} onClick={checkEdi} />
-                          <Button label="SAVE EDI" className="p-button-sm" loading={busy} onClick={saveEdi} />
+                          <Button label={EDI_VAULT_CHROME.check} className="p-button-outlined p-button-sm" loading={busy} onClick={checkEdi} />
+                          <Button label={EDI_VAULT_CHROME.save} className="p-button-sm" loading={busy} onClick={saveEdi} />
                           <Button
-                            label="CANCEL"
+                            label={EDI_VAULT_CHROME.cancel}
                             className="p-button-outlined p-button-sm"
                             onClick={() => {
                               setEditing(false);
@@ -282,18 +282,22 @@ export default function VaultScreen() {
                       {preview && (
                         <>
                           <Button
-                            label="COPY EDI"
+                            label={EDI_VAULT_CHROME.copy}
                             className="p-button-outlined p-button-sm"
-                            onClick={() => navigator.clipboard.writeText(preview.edi || preview.edi_raw || '')}
+                            onClick={() => copyEdi(preview.edi || preview.edi_raw || '').catch((err: Error) => setError(err.message))}
                           />
                           <Button
-                            label="DOWNLOAD"
+                            label={EDI_VAULT_CHROME.download}
                             className="p-button-outlined p-button-sm"
                             onClick={() => api.downloadVaultItem(preview.id).catch((err: Error) => setError(err.message))}
                           />
-                          {preview.request_id && <Link className="p-button p-button-outlined p-button-sm" to={`/requests/${preview.request_id}`}>OPEN REQUEST</Link>}
+                          {preview.request_id && (
+                            <Link className="p-button p-button-outlined p-button-sm" to={`/requests/${preview.request_id}`}>
+                              {EDI_VAULT_EXTRACT.openRequest}
+                            </Link>
+                          )}
                           {admin && preview.mq_send_state === 'FAILED' && preview.request_id && (
-                            <Button label="RETRY" className="p-button-sm" onClick={() => api.retry(preview.request_id!).then(() => openItem(preview.id)).catch((err: Error) => setError(err.message))} />
+                            <Button label={EDI_VAULT_EXTRACT.retry} className="p-button-sm" onClick={() => api.retry(preview.request_id!).then(() => openItem(preview.id)).catch((err: Error) => setError(err.message))} />
                           )}
                         </>
                       )}
@@ -306,11 +310,26 @@ export default function VaultScreen() {
                     )}
                     {error && <p className="text-sm mt-0 mb-3" style={{ color: '#FF3D33' }}>{error}</p>}
                     {check && (
-                      <p className="text-sm mt-0 mb-3" style={{ color: check.ok ? '#23C55E' : '#FF3D33' }}>
-                        {check.ok
-                          ? `EDI checks out — ${check.line_count} record${check.line_count === 1 ? '' : 's'}, all 80 characters: ${check.all_80 ? 'yes' : 'no'}.`
-                          : check.errors.join(' ')}
-                      </p>
+                      <div className="mb-3">
+                        <p className="text-sm mt-0 mb-1" style={{ color: check.ok ? '#23C55E' : '#FF3D33' }}>
+                          {check.ok
+                            ? `EDI checks out — ${check.line_count} record${check.line_count === 1 ? '' : 's'}, all 80 characters, extract rules passed.`
+                            : 'EDI did not pass format or ACE Extract rules.'}
+                        </p>
+                        {!check.ok && [...check.errors, ...(check.rule_errors || [])].map((msg) => (
+                          <p key={msg} className="text-sm mt-0 mb-1" style={{ color: '#FF3D33' }}>{msg}</p>
+                        ))}
+                      </div>
+                    )}
+                    {!check && !editing && (preview?.warnings?.length ?? 0) > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm mt-0 mb-1" style={{ color: '#F58F00' }}>
+                          Saved. Format is valid; ACE Extract rules would still fail on send:
+                        </p>
+                        {preview!.warnings!.map((msg) => (
+                          <p key={msg} className="text-sm mt-0 mb-1" style={{ color: '#F58F00' }}>{msg}</p>
+                        ))}
+                      </div>
                     )}
                     {editing ? (
                       <EdiEditor

@@ -230,6 +230,7 @@ export interface Carrier { code: string; name: string; mode: string; mode_name: 
 export interface VaultCheck {
   ok: boolean;
   errors: string[];
+  rule_errors: string[];
   edi: string;
   records: VaultRecord[];
   line_count: number;
@@ -262,6 +263,8 @@ export interface VaultItem {
   edi_raw?: string;
   records?: VaultRecord[];
   envelope?: string;
+  /** ERF findings. Scratch/orphan saves still succeed; sendable edits are blocked. */
+  warnings?: string[];
 }
 
 export interface Vault {
