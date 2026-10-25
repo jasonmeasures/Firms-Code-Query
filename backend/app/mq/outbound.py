@@ -98,6 +98,7 @@ class ExtractOutbound:
         else:
             detail = 'Live mode is configured' if settings.mq_host else 'Live mode is missing a host'
             writable = bool(settings.mq_host and settings.mq_queue_manager and settings.mq_channel)
+        files = list(self.outbox.glob('*.edi')) if self.outbox.exists() else []
         return {
             'mode': settings.mq_mode,
             'outbound_queue': settings.outbound_queue,
@@ -108,4 +109,8 @@ class ExtractOutbound:
             'port': settings.mq_port,
             'reachable': writable,
             'detail': detail,
+            'priority': PRIORITY,
+            'ttl_ms': TTL_MS,
+            'outbox_dir': str(self.outbox),
+            'outbox_count': len(files),
         }

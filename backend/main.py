@@ -23,7 +23,7 @@ async def lifespan(_app: FastAPI):
 
 
 _settings = get_settings()
-app = FastAPI(title='ACE Extract Reference', version='0.1.0', lifespan=lifespan)
+app = FastAPI(title='CBP reference files', version='0.1.0', lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(_settings.cors_origins),

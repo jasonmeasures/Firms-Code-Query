@@ -1,4 +1,4 @@
-# ACE Extract Reference
+# CBP reference files
 
 Reference-file loads for the CHB platform. A user or agent can query one code.
 An admin can load a whole file. Responses are parsed, stored, and shown in the
@@ -66,16 +66,23 @@ cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-uvicorn main:app --reload --host 0.0.0.0 --port 8080
+uvicorn main:app --reload --host 0.0.0.0 --port 8081
 
 cd frontend
 npm install
 npm run dev
 ```
 
+This program is not the 5106 tool. It uses its own ports so both can run at once:
+
+| App | UI | API |
+| --- | --- | --- |
+| CBP reference files (this repo) | http://localhost:3002 | http://127.0.0.1:8081 |
+| 5106 Importer | http://localhost:3000 or 3001 | http://127.0.0.1:8080 |
+
 `APP_ENV` defaults to `prod`, which refuses demo sign-in. `.env.example` sets `APP_ENV=dev` for local runs. A non-dev start also refuses the dev password, the dev callback secret and a `*` CORS list; set `CORS_ORIGINS` to the UI origin.
 
-Open http://localhost:3000. `GET /health` returns `{"status": "ok"}`.
+Open http://localhost:3002. `GET http://127.0.0.1:8081/health` returns `{"status": "ok"}`.
 
 Nothing is sent to ACE. `MQ_MODE=mock` writes `backend/mq_outbox/`. Paste a
 response on the request screen (admin, dev only) or post it to

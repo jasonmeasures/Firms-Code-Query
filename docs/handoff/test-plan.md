@@ -1,7 +1,8 @@
-# Test Plan — ACE Extract Reference / FIRMS Code Query
+# Test Plan — CBP reference files
 
 > **Document Type:** Test Plan  
-> **Feature:** ACE Extract Reference  
+> **Feature:** CBP reference files  
+
 > **Version:** 1.0  
 > **Date:** 2026-10-23  
 > **Parent Use Cases:** `docs/handoff/use-cases.md`  

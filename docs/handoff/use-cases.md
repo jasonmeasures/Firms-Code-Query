@@ -1,7 +1,8 @@
-# Use Cases — ACE Extract Reference / FIRMS Code Query
+# Use Cases — CBP reference files
 
 > **Document Type:** Use Cases  
-> **Feature:** ACE Extract Reference (FIRMS, ports, countries, carriers, HTS)  
+> **Feature:** CBP reference files (FIRMS, ports, countries, carriers, HTS)  
+
 > **Version:** 1.0  
 > **Date:** 2026-10-23  
 > **Parent:** `firms_query_build_prompt.md`, ACE Extract Reference 2018-06-25  

@@ -21,9 +21,9 @@ export default function App() {
       <header className="kn-topbar flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
           <div className="text-sm font-bold" style={{ letterSpacing: '0.16em', color: '#005D7C' }}>KLEARNOW</div>
-          <strong>ACE Extract Reference</strong>
+          <strong>CBP reference files</strong>
         </div>
-        <nav className="flex gap-1" aria-label="Extract reference">
+        <nav className="flex gap-1" aria-label="CBP reference files">
           {links.map(([to, label]) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `kn-nav-btn${isActive ? ' active' : ''}`}>
               {label}

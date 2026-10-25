@@ -63,7 +63,22 @@ body {
   max-height: 420px;
 }
 .kn-edi pre { margin: 0; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre; }
-.kn-ruler { color: #6f8aa5; }
+.kn-edi-editor {
+  font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  min-height: 220px;
+  background: transparent;
+  color: #d6e6f5;
+  border: 0;
+  resize: vertical;
+  padding: 0;
+}
+.kn-edi-editor:focus { outline: 1px solid #49BFE8; }
+.kn-edi-shell { max-height: none; }
+.kn-edi-cursor {
+  font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  margin: 0;
+}
+.kn-ruler { color: #6f8aa5; white-space: pre; margin: 0; }
 
 .kn-card {
   border: 1px solid var(--color-surface-300);
@@ -73,3 +88,13 @@ body {
 }
 .kn-card h3 { margin: 0 0 0.35rem; color: #11304C; }
 .kn-help { color: var(--color-blue-gray-500); font-size: 0.85rem; }
+
+.field-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary-500);
+}

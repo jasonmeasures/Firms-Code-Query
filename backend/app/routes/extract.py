@@ -30,6 +30,7 @@ from app.models import (
 from app.mq.outbound import ExtractOutbound
 from app.security import can_see, current_user, require_admin, visible_requests
 from app.services.entry import ENTRY_SOURCES, validate_entry_locations
+from app.services import vault as vault_svc
 from app.services.workflow import apply_response, mask_password, preview, resume_unsent, retry, submit
 
 router = APIRouter(prefix='/api/extract')
@@ -59,6 +60,18 @@ class EntryLocation(BaseModel):
 
 class EntryValidateBody(BaseModel):
     locations: list[EntryLocation] = Field(default_factory=list)
+
+
+class VaultEdiBody(BaseModel):
+    edi: str
+
+
+class MqTestBody(BaseModel):
+    host: str | None = None
+    port: str | None = None
+    queue_manager: str | None = None
+    channel: str | None = None
+    mode: str | None = None
 
 
 def _request_dict(row: ExtractRequest, *, with_edi: bool = False) -> dict:
@@ -252,31 +265,76 @@ def callback(
 
 @router.get('/mq/status')
 def mq_status(user: User = Depends(current_user)) -> dict:
+    del user
     return ExtractOutbound().status()
+
+
+@router.post('/mq/test')
+def mq_test(body: MqTestBody, user: User = Depends(require_admin)) -> dict:
+    del body
+    status = ExtractOutbound().status()
+    if not status['reachable']:
+        raise HTTPException(status_code=503, detail=status['detail'])
+    return {'ok': True, 'status': status, 'user': user.id}
+
+
+@router.get('/usage')
+def usage(session: Session = Depends(get_session), user: User = Depends(current_user)) -> dict:
+    rows = session.scalars(visible_requests(user)).all()
+    jobs = {row.job_id for row in rows if row.job_id}
+    vault_only = sum(1 for row in rows if row.query_type == 'VAULT')
+    events = [
+        {'event_type': 'extract_query', 'unit': 'query', 'count': len(rows), 'quantity': len(rows)},
+        {'event_type': 'extract_job', 'unit': 'job', 'count': len(jobs), 'quantity': len(jobs)},
+        {'event_type': 'vault_edi', 'unit': 'edi', 'count': vault_only, 'quantity': vault_only},
+    ]
+    events = [item for item in events if item['count']]
+    return {
+        'events': events,
+        'total_events': sum(item['count'] for item in events),
+        'total_quantity': sum(item['quantity'] for item in events),
+    }
 
 
 @router.get('/vault')
 def vault(session: Session = Depends(get_session), user: User = Depends(current_user)) -> dict:
-    rows = session.scalars(visible_requests(user).limit(200)).all()
-    payload = {'requests': [_request_dict(row, with_edi=True) for row in rows]}
-    failed = [row for row in rows if row.mq_send_state == 'FAILED']
-    if user.role == 'ADMIN':
-        orphans = session.scalars(select(ExtractOrphan).order_by(ExtractOrphan.received_at.desc()).limit(100)).all()
-        payload['orphans'] = [
-            {
-                'id': item.id,
-                'control_id': item.control_id,
-                'kn_number': item.kn_number,
-                'raw_text': item.raw_text,
-                'received_at': item.received_at.isoformat() if item.received_at else None,
-            }
-            for item in orphans
-        ]
-        payload['dead_letters'] = [_request_dict(row, with_edi=True) for row in failed]
-    else:
-        payload['orphans'] = []
-        payload['dead_letters'] = []
-    return payload
+    return vault_svc.list_vault(session, user)
+
+
+@router.post('/vault')
+def vault_add(body: VaultEdiBody, session: Session = Depends(get_session), user: User = Depends(current_user)) -> dict:
+    return vault_svc.add_item(session, user, body.edi)
+
+
+@router.post('/vault/check')
+def vault_check(body: VaultEdiBody, user: User = Depends(current_user)) -> dict:
+    del user
+    return vault_svc.check_edi(body.edi)
+
+
+@router.get('/vault/{item_id}')
+def vault_item(item_id: str, session: Session = Depends(get_session), user: User = Depends(current_user)) -> dict:
+    return vault_svc.get_item(session, user, item_id)
+
+
+@router.put('/vault/{item_id}')
+def vault_edit(
+    item_id: str,
+    body: VaultEdiBody,
+    session: Session = Depends(get_session),
+    user: User = Depends(current_user),
+) -> dict:
+    return vault_svc.edit_item(session, user, item_id, body.edi)
+
+
+@router.get('/vault/{item_id}/download')
+def vault_download(item_id: str, session: Session = Depends(get_session), user: User = Depends(current_user)) -> Response:
+    filename, text = vault_svc.download_text(session, user, item_id)
+    return Response(
+        content=text,
+        media_type='text/plain',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get('/reference/summary')
