@@ -27,8 +27,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   const type = res.headers.get('content-type') || '';
-  if (type.includes('text/csv')) return (await res.text()) as T;
+  if (type.includes('text/csv') || type.includes('text/plain')) return (await res.text()) as T;
   return res.json() as Promise<T>;
+}
+
+async function downloadVaultItem(id: string): Promise<void> {
+  const headers = new Headers();
+  headers.set('X-Demo-User', demoUser());
+  const res = await fetch(`${API}/api/extract/vault/${encodeURIComponent(id)}/download`, { headers });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const detail = (data as { detail?: unknown }).detail;
+    throw new Error(Array.isArray(detail) ? detail.join(' ') : String(detail || res.statusText));
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  link.href = url;
+  link.download = match?.[1] || `${id}.edi`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export const api = {
@@ -53,7 +75,18 @@ export const api = {
   foreignPorts: (q = '') => request<{ rows: Named[] }>(`/api/extract/reference/foreign-ports?q=${encodeURIComponent(q)}`),
   carriers: (q = '') => request<{ rows: Carrier[] }>(`/api/extract/reference/carriers?q=${encodeURIComponent(q)}`),
   vault: () => request<Vault>('/api/extract/vault'),
+  vaultItem: (id: string) => request<VaultItem>(`/api/extract/vault/${encodeURIComponent(id)}`),
+  addVaultItem: (edi: string) =>
+    request<VaultItem>('/api/extract/vault', { method: 'POST', body: JSON.stringify({ edi }) }),
+  checkVaultItem: (edi: string) =>
+    request<VaultCheck>('/api/extract/vault/check', { method: 'POST', body: JSON.stringify({ edi }) }),
+  saveVaultItem: (id: string, edi: string) =>
+    request<VaultItem>(`/api/extract/vault/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ edi }) }),
+  downloadVaultItem: (id: string) => downloadVaultItem(id),
   mq: () => request<MqStatus>('/api/extract/mq/status'),
+  mqTest: (body: Partial<MqStatus> = {}) =>
+    request<{ ok: boolean; status: MqStatus }>('/api/extract/mq/test', { method: 'POST', body: JSON.stringify(body) }),
+  usage: () => request<UsageSummary>('/api/extract/usage'),
   validateFirms: (locations: { firms_code: string; source: string }[]) =>
     request<EntryValidation>('/api/extract/reference/firms/validate', {
       method: 'POST',
@@ -194,10 +227,52 @@ export interface Change {
 export interface Named { code: string; name: string; city?: string; state?: string; zip?: string }
 export interface Country { iso: string; name: string; spi: string }
 export interface Carrier { code: string; name: string; mode: string; mode_name: string }
+export interface VaultCheck {
+  ok: boolean;
+  errors: string[];
+  rule_errors: string[];
+  edi: string;
+  records: VaultRecord[];
+  line_count: number;
+  all_80: boolean;
+}
+export interface VaultRecord {
+  id: string;
+  label: string;
+  text: string;
+  length: number;
+  ok: boolean;
+}
+
+export interface VaultItem {
+  id: string;
+  filename: string;
+  edi_filename?: string;
+  status: string;
+  action: string;
+  file_code: string;
+  query_type: string;
+  control_id: string;
+  kn_number: string;
+  mq_send_state: string | null;
+  mq_send_error: string | null;
+  request_id: string | null;
+  editable: boolean;
+  edit_locked_reason: string | null;
+  edi?: string;
+  edi_raw?: string;
+  records?: VaultRecord[];
+  envelope?: string;
+  /** ERF findings. Scratch/orphan saves still succeed; sendable edits are blocked. */
+  warnings?: string[];
+}
+
 export interface Vault {
-  requests: ExtractRequest[];
+  filings: VaultItem[];
+  outbox: VaultItem[];
+  requests: VaultItem[];
   orphans: { id: string; control_id: string | null; kn_number: string | null; raw_text: string; received_at: string | null }[];
-  dead_letters: ExtractRequest[];
+  dead_letters: VaultItem[];
 }
 export interface EntryValidation {
   ok: boolean;
@@ -205,4 +280,22 @@ export interface EntryValidation {
   warnings: Array<Record<string, unknown>>;
   results: Array<Record<string, unknown>>;
 }
-export interface MqStatus { mode: string; outbound_queue: string; inbound_queue: string; reachable: boolean; detail: string }
+export interface UsageSummary {
+  events: { event_type: string; unit: string; count: number; quantity: number }[];
+  total_events: number;
+  total_quantity: number;
+}
+export interface MqStatus {
+  mode: string;
+  outbound_queue: string;
+  inbound_queue: string;
+  reachable: boolean;
+  detail: string;
+  host?: string;
+  port?: string;
+  queue_manager?: string;
+  channel?: string;
+  priority?: number;
+  ttl_ms?: number;
+  outbox_count?: number;
+}

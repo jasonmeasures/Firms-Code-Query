@@ -1,4 +1,4 @@
-# ACE Extract Reference
+# CBP reference files
 
 Reference-file loads for the CHB platform. A user or agent can query one code.
 An admin can load a whole file. Responses are parsed, stored, and shown in the
@@ -6,7 +6,9 @@ same status words on every file.
 
 This is its own program. The 5106 tool was the pattern for the PrimeReact
 screens and for the mock MQ path (outbox, callback, admin retry, vault). Its
-repository is not modified and its envelope is not reused.
+repository is not modified and its envelope is not reused. Vault add/edit
+rules, and where they must not follow 5106, are in
+[`docs/handoff/edi-vault.md`](docs/handoff/edi-vault.md).
 
 ## Files in the June 25, 2018 chapter
 
@@ -66,14 +68,23 @@ cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-uvicorn main:app --reload --host 0.0.0.0 --port 8080
+uvicorn main:app --reload --host 0.0.0.0 --port 8081
 
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000. `GET /health` returns `{"status": "ok"}`.
+This program is not the 5106 tool. It uses its own ports so both can run at once:
+
+| App | UI | API |
+| --- | --- | --- |
+| CBP reference files (this repo) | http://localhost:3002 | http://127.0.0.1:8081 |
+| 5106 Importer | http://localhost:3000 or 3001 | http://127.0.0.1:8080 |
+
+`APP_ENV` defaults to `prod`, which refuses demo sign-in. `.env.example` sets `APP_ENV=dev` for local runs. A non-dev start also refuses the dev password, the dev callback secret and a `*` CORS list; set `CORS_ORIGINS` to the UI origin.
+
+Open http://localhost:3002. `GET http://127.0.0.1:8081/health` returns `{"status": "ok"}`.
 
 Nothing is sent to ACE. `MQ_MODE=mock` writes `backend/mq_outbox/`. Paste a
 response on the request screen (admin, dev only) or post it to
@@ -90,11 +101,17 @@ cd frontend && npm run test:regression
 ```
 
 Backend: golden EDI, F411 catalog, mock MQ, jobs/sweep, phase-2 entry validation, and acceptance paths.
-Frontend: query-rule regression, entry checks, preview/timeline/cards, keyboard, and axe.
+Frontend: query-rule regression, entry checks, preview/timeline/cards, keyboard, axe, and vault chrome (EDIT / COPY / DOWNLOAD / OPEN REQUEST).
 
 ## For engineering
 
-`backend/app/migrations/add_extract_tables.py` is provisional Postgres DDL.
+Postgres DDL is generated from the models: `cd backend && python -m app.migrations.generate_ddl > migrations/001_extract_reference.sql` (a test fails if the file is stale). It is provisional and has not been run against a live Postgres.
+
+Parsed rows are written through `ReferenceSink` in `backend/app/repository.py`. To land them in the CHB tables, add a sink and return it from `get_reference_sink()`.
+
+Install `requirements-dev.txt` for tests; `requirements-live.txt` adds `pymqi` for `MQ_MODE=live`. The stored EDI has the password blanked; it is restored only for the queue PUT.
+
+The provisional note:
 Point it at the CHB tables when that repository is available. Dead-letter,
 backoff, response timeouts, and a queue-depth console are waiting on the
 Engine transmitter.

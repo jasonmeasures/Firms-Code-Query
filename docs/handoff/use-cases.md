@@ -1,7 +1,8 @@
-# Use Cases — ACE Extract Reference / FIRMS Code Query
+# Use Cases — CBP reference files
 
 > **Document Type:** Use Cases  
-> **Feature:** ACE Extract Reference (FIRMS, ports, countries, carriers, HTS)  
+> **Feature:** CBP reference files (FIRMS, ports, countries, carriers, HTS)  
+
 > **Version:** 1.0  
 > **Date:** 2026-10-23  
 > **Parent:** `firms_query_build_prompt.md`, ACE Extract Reference 2018-06-25  
@@ -163,9 +164,11 @@
 
 ### Main flow
 
-1. Admin finds a request by control ID or KN number.
-2. Failed sends appear as dead letters. Admin retries.
-3. Unmatched control IDs stay in the orphan list. Operators do not see orphans.
+1. Operator or admin opens Tools → EDI vault. Submitted queries appear as filings.
+2. Add EDI accepts an extract block (F101–F111). A 5106 `T1` block is refused. Check does not save.
+3. Edit is allowed until a successful send. Password (A 9–14) and control ID (B 60–80) cannot change. A 60–80 stays blank.
+4. Admin finds a request by control ID. Failed sends appear as dead letters. Admin retries.
+5. Unmatched FO control IDs stay in the orphan list. Operators do not see orphans or leftover outbox files.
 
 ### Acceptance criteria
 

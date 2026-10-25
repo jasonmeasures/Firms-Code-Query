@@ -45,6 +45,7 @@ class Settings:
     outbound_queue: str
     inbound_queue: str
     max_body_records: int
+    cors_origins: tuple[str, ...] = ()
 
     @property
     def is_dev(self) -> bool:
@@ -93,4 +94,25 @@ def get_settings() -> Settings:
         outbound_queue=_env("EXTRACT_OUTBOUND_QUEUE", "MQ_OUTBOUND_QUEUE", default="CBP.OUT.EXTRACT.QUERY"),
         inbound_queue=_env("EXTRACT_INBOUND_QUEUE", "MQ_INBOUND_QUEUE", default="CBP.IN.EXTRACT.RESPONSE"),
         max_body_records=max_body,
+        cors_origins=tuple(
+            o.strip() for o in _env("CORS_ORIGINS", default="").split(",") if o.strip()
+        ),
     )
+
+
+DEV_PASSWORD = "KLEAR1"
+DEV_CALLBACK_SECRET = "dev-callback-secret"
+
+
+def startup_problems(settings: Settings) -> list[str]:
+    """Settings that must not reach a non-dev environment."""
+    if settings.is_dev:
+        return []
+    problems = []
+    if settings.password in {"", DEV_PASSWORD}:
+        problems.append("KN_TRANSMITTER_PASSWORD is unset or the dev default")
+    if settings.callback_secret in {"", DEV_CALLBACK_SECRET}:
+        problems.append("EXTRACT_CALLBACK_SECRET is unset or the dev default")
+    if "*" in settings.cors_origins:
+        problems.append("CORS_ORIGINS must list origins, not *")
+    return problems

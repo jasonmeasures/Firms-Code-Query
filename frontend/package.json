@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:regression": "vitest run src/lib/validation.regression.test.ts src/lib/entry.test.ts"
+    "test:regression": "vitest run src/lib/validation.regression.test.ts src/lib/entry.test.ts src/lib/ediVaultChrome.test.ts src/pages/VaultScreen.test.tsx"
   },
   "dependencies": {
     "primeflex": "^3.3.1",
